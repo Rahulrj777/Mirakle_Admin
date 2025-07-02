@@ -45,8 +45,12 @@ const AdminBannerUpload = () => {
   };
 
   const fetchBanners = async () => {
-    const res = await axios.get(`${API_BASE}/api/banners`);
-    setBanners(res.data);
+    try {
+      const res = await axios.get(`${API_BASE}/api/banners`);
+      setBanners(res.data);
+    } catch (err) {
+      console.error("Failed to fetch banners:", err);
+    }
   };
 
   useEffect(() => {
