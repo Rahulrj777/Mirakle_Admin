@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from "../utils/api"; 
+import imageCompression from 'browser-image-compression';
 
 const AdminProductUpload = () => {
   const [name, setName] = useState('');
@@ -44,8 +45,18 @@ const AdminProductUpload = () => {
     if (fileInput) fileInput.value = '';
   };
 
-  const handleImageChange = (e) => {
-    setImages([...images, ...Array.from(e.target.files)]);
+  const handleImageChange = async (e) => {
+    const files = Array.from(e.target.files);
+    const compressedFiles = await Promise.all(
+      files.map(async (file) =>
+        await imageCompression(file, {
+          maxSizeMB: 0.3, // 300KB
+          maxWidthOrHeight: 1024,
+          useWebWorker: true,
+        })
+      )
+    );
+    setImages((prev) => [...prev, ...compressedFiles]);
   };
 
   const handleImageRemove = (imgPath) => {
