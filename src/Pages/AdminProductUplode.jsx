@@ -105,8 +105,11 @@ const AdminProductUpload = () => {
   };
 
   const handleSubmit = async () => {
+    console.log("🔘 Submit button clicked");
+
     if (!name || variants.some(v => !v.sizeValue || !v.price)) {
       alert('Product name and current price are required');
+      console.warn("❌ Validation failed", { name, variants });
       return;
     }
 
@@ -117,7 +120,6 @@ const AdminProductUpload = () => {
       stock: parseInt(v.stock),
     }));
 
-    // ✅ Convert detailsList array to object
     const detailsObject = {};
     detailsList.forEach(item => {
       if (item.key && item.value) {
@@ -128,27 +130,38 @@ const AdminProductUpload = () => {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('variants', JSON.stringify(preparedVariants));
-    formData.append('description', description); // ✅ added
-    formData.append('details', JSON.stringify(detailsObject)); // ✅ added
-
+    formData.append('description', description);
+    formData.append('details', JSON.stringify(detailsObject));
     images.forEach((img) => formData.append('images', img));
 
     if (editingProduct) {
       formData.append('removedImages', JSON.stringify(removedImages));
     }
 
+    // 🔍 Log form data entries
+    for (let pair of formData.entries()) {
+      console.log(`📝 ${pair[0]}:`, pair[1]);
+    }
+
     try {
       if (editingProduct) {
-        await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData);
-        alert('Product updated');
+        const res = await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        alert('✅ Product updated');
+        console.log("🟢 Updated:", res.data);
       } else {
-        await axios.post(`${API_BASE}/api/products/upload-product`, formData);
-        alert('Product uploaded');
+        const res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        alert('✅ Product uploaded');
+        console.log("🟢 Uploaded:", res.data);
       }
+
       resetForm();
       fetchProducts();
     } catch (err) {
-      console.error('Upload error:', err.response?.data || err.message);
+      console.error('❌ Upload error:', err.response?.data || err.message);
       alert(err.response?.data?.message || 'Upload failed');
     }
   };
