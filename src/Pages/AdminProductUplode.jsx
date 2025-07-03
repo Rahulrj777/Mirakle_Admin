@@ -7,9 +7,11 @@ const ProductPickerModal = ({ onClose, selected, setSelected, max = 6 }) => {
   const [allProducts, setAllProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+ useEffect(() => {
+  if (!Array.isArray(selected)) {
+    console.warn("`selected` is not an array");
+  }
+}, [selected]);
 
   const fetchProducts = async () => {
     try {
@@ -30,7 +32,7 @@ const ProductPickerModal = ({ onClose, selected, setSelected, max = 6 }) => {
     }
   };
 
-  const isSelected = (id) => selected.some(p => p._id === id);
+  const isSelected = (id) => selected?.some(p => p._id === id);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
