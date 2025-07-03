@@ -22,7 +22,7 @@ const AdminBannerUpload = () => {
 
   const fetchBanners = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/banners`);
+      const res = await axios.get(`${API_BASE}/api/banners?type=${type}`);
       setBanners(res.data);
     } catch (err) {
       console.error("Failed to fetch banners", err);
@@ -45,14 +45,17 @@ const AdminBannerUpload = () => {
     setSelectedProducts([]);
     setEditingBanner(null);
     setDisableSelect(false);
-    document.getElementById('banner-file').value = '';
+    document.getElementById('banner-file')?.value = '';
+    fetchBanners();
   };
 
   const handleUpload = async () => {
-    if (type === 'top-selling' || type === 'product-type') {
-      if (selectedProducts.length === 0) return toast.error("Select at least one product");
-    } else {
-      if (!image) return toast.error("Image is required");
+    if ((type === 'top-selling' || type === 'product-type') && selectedProducts.length === 0) {
+      return toast.error("Select at least one product");
+    }
+
+    if ((type === 'slider' || type === 'offer') && !image) {
+      return toast.error("Image is required");
     }
 
     const formData = new FormData();
@@ -74,7 +77,6 @@ const AdminBannerUpload = () => {
         await axios.post(`${API_BASE}/api/banners/upload`, formData);
         toast.success('Banner uploaded successfully');
       }
-      fetchBanners();
       resetForm();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Upload failed');
@@ -94,6 +96,16 @@ const AdminBannerUpload = () => {
     });
   };
 
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${API_BASE}/api/banners/${id}`);
+      toast.success("Deleted successfully");
+      fetchBanners();
+    } catch (err) {
+      toast.error("Delete failed");
+    }
+  };
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">Admin Banner Upload Panel</h2>
@@ -105,10 +117,9 @@ const AdminBannerUpload = () => {
         disabled={disableSelect || editingBanner}
       >
         <option value="slider">Main Swiper Banner</option>
-        <option value="side">Side Banner</option>
         <option value="offer">Offer Banner</option>
-        <option value="top-selling">Top Selling</option>
-        <option value="product-type">Special Product</option>
+        <option value="top-selling">Most Selling Products</option>
+        <option value="product-type">Special Products</option>
       </select>
 
       {(type === 'top-selling' || type === 'product-type') ? (
@@ -160,6 +171,23 @@ const AdminBannerUpload = () => {
           max={type === 'top-selling' ? 6 : 10}
         />
       )}
+
+      <h2 className="text-xl font-semibold mt-10 mb-4">Uploaded Banners</h2>
+      <div className="grid md:grid-cols-3 gap-4">
+        {banners.map(banner => (
+          <div key={banner._id} className="border p-2 rounded shadow relative">
+            {banner.imageUrl && (
+              <img src={`${API_BASE}${banner.imageUrl}`} className="w-full h-32 object-cover rounded" />
+            )}
+            {banner.productIds?.length > 0 && (
+              <div className="text-sm text-gray-700 mt-2">Linked Products: {banner.productIds.length}</div>
+            )}
+            <button onClick={() => handleDelete(banner._id)} className="absolute top-1 right-1 text-white bg-red-500 px-2 py-1 rounded text-xs">
+              Delete
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
