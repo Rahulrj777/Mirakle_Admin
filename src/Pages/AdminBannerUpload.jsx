@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -156,20 +158,38 @@ const AdminBannerUpload = () => {
     }
   }
 
-  // FIXED: Handle product navigation properly
+  // 🚨 FIXED: Handle product navigation properly
   const handleProductClick = (banner) => {
-    if (banner.productId && typeof banner.productId === "object") {
-      // If productId is populated object, use its _id
-      const productId = banner.productId._id
-      console.log("Navigating to product:", productId)
-      window.open(`https://mirakle-client.vercel.app/product/${productId}`, "_blank")
-    } else if (banner.productId && typeof banner.productId === "string") {
-      // If productId is just a string ID
-      console.log("Navigating to product:", banner.productId)
-      window.open(`https://mirakle-client.vercel.app/product/${banner.productId}`, "_blank")
+    console.log("🔍 Banner object:", banner)
+    console.log("🔍 ProductId type:", typeof banner.productId)
+    console.log("🔍 ProductId value:", banner.productId)
+
+    let productId = null
+
+    // Handle different cases of productId
+    if (banner.productId) {
+      if (typeof banner.productId === "string") {
+        // Case 1: productId is a string
+        productId = banner.productId
+        console.log("✅ Using string productId:", productId)
+      } else if (typeof banner.productId === "object" && banner.productId._id) {
+        // Case 2: productId is a populated object with _id
+        productId = banner.productId._id
+        console.log("✅ Using object._id:", productId)
+      } else if (typeof banner.productId === "object" && banner.productId.toString) {
+        // Case 3: productId is an ObjectId that can be converted to string
+        productId = banner.productId.toString()
+        console.log("✅ Using toString():", productId)
+      }
+    }
+
+    if (productId && typeof productId === "string" && productId.length > 0) {
+      const url = `https://mirakle-client.vercel.app/product/${productId}`
+      console.log("🚀 Navigating to:", url)
+      window.open(url, "_blank")
     } else {
-      console.error("Invalid product ID:", banner.productId)
-      alert("Invalid product ID")
+      console.error("❌ Invalid product ID:", banner.productId)
+      alert("Invalid product ID. Cannot navigate to product page.")
     }
   }
 
