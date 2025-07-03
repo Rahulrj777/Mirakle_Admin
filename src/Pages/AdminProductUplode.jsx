@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE } from "../utils/api";
-import ProductPickerModal from "./ProductPickerModal";
+import { API_BASE } from "../utils/api"; 
 
 const AdminProductUpload = () => {
   const [name, setName] = useState('');
@@ -16,8 +15,6 @@ const AdminProductUpload = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [detailsList, setDetailsList] = useState([{ key: '', value: '' }]);
   const [description, setDescription] = useState('');
-  const [showProductModal, setShowProductModal] = useState(false);
-  const [relatedProducts, setRelatedProducts] = useState([]);
 
   useEffect(() => {
     fetchProducts();
@@ -43,7 +40,6 @@ const AdminProductUpload = () => {
     setEditingProduct(null);
     setDetailsList([{ key: '', value: '' }]);
     setDescription('');
-    setRelatedProducts([]);
     const fileInput = document.getElementById('product-images');
     if (fileInput) fileInput.value = '';
   };
@@ -67,6 +63,7 @@ const AdminProductUpload = () => {
     setVariants(prev => {
       const updated = [...prev];
       updated[index][field] = value;
+
       const price = parseFloat(updated[index].price);
       const discount = parseFloat(updated[index].discountPercent);
       if (!isNaN(price) && !isNaN(discount)) {
@@ -74,6 +71,7 @@ const AdminProductUpload = () => {
       } else {
         updated[index].finalPrice = '';
       }
+
       return updated;
     });
   };
@@ -107,8 +105,11 @@ const AdminProductUpload = () => {
   };
 
   const handleSubmit = async () => {
+    console.log("🔘 Submit button clicked");
+
     if (!name || variants.some(v => !v.sizeValue || !v.price)) {
       alert('Product name and current price are required');
+      console.warn("❌ Validation failed", { name, variants });
       return;
     }
 
@@ -131,24 +132,32 @@ const AdminProductUpload = () => {
     formData.append('variants', JSON.stringify(preparedVariants));
     formData.append('description', description);
     formData.append('details', JSON.stringify(detailsObject));
-    formData.append('relatedProducts', JSON.stringify(relatedProducts.map(p => p._id)));
     images.forEach((img) => formData.append('images', img));
+
     if (editingProduct) {
       formData.append('removedImages', JSON.stringify(removedImages));
     }
 
+    // 🔍 Log form data entries
+    for (let pair of formData.entries()) {
+      console.log(`📝 ${pair[0]}:`, pair[1]);
+    }
+
     try {
       if (editingProduct) {
-        await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
+        const res = await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         alert('✅ Product updated');
+        console.log("🟢 Updated:", res.data);
       } else {
-        await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
+        const res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         alert('✅ Product uploaded');
+        console.log("🟢 Uploaded:", res.data);
       }
+
       resetForm();
       fetchProducts();
     } catch (err) {
@@ -177,7 +186,6 @@ const AdminProductUpload = () => {
     setExistingImages(product.images?.others || []);
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value })));
     setDescription(product.description || '');
-    setRelatedProducts(product.relatedProducts || []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -209,17 +217,53 @@ const AdminProductUpload = () => {
 
       {variants.map((variant, i) => (
         <div key={i} className="grid grid-cols-7 gap-2 mb-2">
-          <input type="number" placeholder="Size Value" value={variant.sizeValue} onChange={(e) => handleVariantChange(i, 'sizeValue', e.target.value)} className="p-2 border" />
-          <select value={variant.sizeUnit} onChange={(e) => handleVariantChange(i, 'sizeUnit', e.target.value)} className="p-2 border">
+          <input
+            type="number"
+            placeholder="Size Value"
+            value={variant.sizeValue}
+            onChange={(e) => handleVariantChange(i, 'sizeValue', e.target.value)}
+            className="p-2 border"
+          />
+          <select
+            value={variant.sizeUnit}
+            onChange={(e) => handleVariantChange(i, 'sizeUnit', e.target.value)}
+            className="p-2 border"
+          >
             <option value="ml">ml</option>
             <option value="li">li</option>
             <option value="g">g</option>
           </select>
-          <input type="number" placeholder="Price" value={variant.price} onChange={(e) => handleVariantChange(i, 'price', e.target.value)} className="p-2 border" />
-          <input type="number" placeholder="Discount %" value={variant.discountPercent} onChange={(e) => handleVariantChange(i, 'discountPercent', e.target.value)} className="p-2 border" />
-          <input type="text" value={variant.finalPrice} placeholder="Final Price" readOnly className="p-2 border bg-gray-100" />
-          <input type="number" placeholder="Stock" value={variant.stock} onChange={(e) => handleVariantChange(i, 'stock', e.target.value)} className="p-2 border" />
-          {variants.length > 1 && <button onClick={() => removeVariant(i)} className="text-red-500">Remove</button>}
+          <input
+            type="number"
+            placeholder="Price"
+            value={variant.price}
+            onChange={(e) => handleVariantChange(i, 'price', e.target.value)}
+            className="p-2 border"
+          />
+          <input
+            type="number"
+            placeholder="Discount %"
+            value={variant.discountPercent}
+            onChange={(e) => handleVariantChange(i, 'discountPercent', e.target.value)}
+            className="p-2 border"
+          />
+          <input
+            type="text"
+            value={variant.finalPrice}
+            placeholder="Final Price"
+            readOnly
+            className="p-2 border bg-gray-100"
+          />
+          <input
+            type="number"
+            placeholder="Stock"
+            value={variant.stock}
+            onChange={(e) => handleVariantChange(i, 'stock', e.target.value)}
+            className="p-2 border"
+          />
+          {variants.length > 1 && (
+            <button onClick={() => removeVariant(i)} className="text-red-500">Remove</button>
+          )}
         </div>
       ))}
       <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">+ Add Variant</button>
@@ -227,33 +271,36 @@ const AdminProductUpload = () => {
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
-          <input type="text" placeholder="Label (e.g., Brand)" value={item.key} onChange={(e) => handleDetailChange(index, 'key', e.target.value)} className="p-2 border" />
-          <input type="text" placeholder="Value (e.g., Mirakle)" value={item.value} onChange={(e) => handleDetailChange(index, 'value', e.target.value)} className="p-2 border" />
-          {detailsList.length > 1 && <button onClick={() => removeDetailField(index)} className="text-red-500">Remove</button>}
+          <input
+            type="text"
+            placeholder="Label (e.g., Brand)"
+            value={item.key}
+            onChange={(e) => handleDetailChange(index, 'key', e.target.value)}
+            className="p-2 border"
+          />
+          <input
+            type="text"
+            placeholder="Value (e.g., Mirakle)"
+            value={item.value}
+            onChange={(e) => handleDetailChange(index, 'value', e.target.value)}
+            className="p-2 border"
+          />
+          {detailsList.length > 1 && (
+            <button onClick={() => removeDetailField(index)} className="text-red-500">Remove</button>
+          )}
         </div>
       ))}
-      <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">+ Add Detail</button>
+      <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">
+        + Add Detail
+      </button>
 
-      <textarea rows="5" placeholder="Enter product description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full border p-2" />
-
-      <button onClick={() => setShowProductModal(true)} className="bg-blue-500 text-white px-4 py-2 rounded mt-4">+ Select Related Products</button>
-      {relatedProducts.length > 0 && (
-        <div className="mt-2 mb-4">
-          <p className="font-semibold mb-1">Related Products:</p>
-          <ul className="list-disc ml-6">
-            {relatedProducts.map((p) => <li key={p._id}>{p.title}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {showProductModal && (
-        <ProductPickerModal
-          onClose={() => setShowProductModal(false)}
-          selected={relatedProducts}
-          setSelected={setRelatedProducts}
-          max={6}
-        />
-      )}
+      <textarea
+        rows="5"
+        placeholder="Enter product description (optional)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        className="w-full border p-2"
+      />
 
       <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
 
@@ -292,7 +339,11 @@ const AdminProductUpload = () => {
         {products.filter(p => p.title.toLowerCase().includes(searchTerm.toLowerCase())).map(product => (
           <div key={product._id} className="border p-4 rounded shadow">
             <img
-              src={product?.images?.others?.[0] ? `${API_BASE}${product.images.others[0]}` : 'https://via.placeholder.com/150'}
+              src={
+                product?.images?.others?.[0]
+                  ? `${API_BASE}${product.images.others[0]}`
+                  : 'https://via.placeholder.com/150'
+              }
               alt={product.title}
               className="w-full h-40 object-cover mb-2 rounded"
             />
