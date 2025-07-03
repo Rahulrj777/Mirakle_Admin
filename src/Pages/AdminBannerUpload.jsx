@@ -3,9 +3,7 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 import SparkMD5 from "spark-md5"
-
-// Make sure your API_BASE is correct
-const API_BASE = "https://mirakle-website-server.onrender.com"
+import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
@@ -16,7 +14,6 @@ const AdminBannerUpload = () => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [editingBanner, setEditingBanner] = useState(null)
   const [productSearchTerm, setProductSearchTerm] = useState("")
-  const [loading, setLoading] = useState(false)
 
   const computeFileHash = (file) => {
     return new Promise((resolve, reject) => {
@@ -48,35 +45,19 @@ const AdminBannerUpload = () => {
 
   const fetchBanners = async () => {
     try {
-      console.log("Fetching banners from:", `${API_BASE}/api/banners`)
-      const res = await axios.get(`${API_BASE}/api/banners`, {
-        timeout: 10000,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      const res = await axios.get(`${API_BASE}/api/banners`)
       setBanners(res.data)
-      console.log("Banners fetched:", res.data.length)
     } catch (err) {
       console.error("Failed to fetch banners:", err)
-      alert(`Failed to fetch banners: ${err.response?.data?.message || err.message}`)
     }
   }
 
   const fetchProducts = async () => {
     try {
-      console.log("Fetching products from:", `${API_BASE}/api/products/all-products`)
-      const res = await axios.get(`${API_BASE}/api/products/all-products`, {
-        timeout: 10000,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      const res = await axios.get(`${API_BASE}/api/products/all-products`)
       setProducts(res.data)
-      console.log("Products fetched:", res.data.length)
     } catch (err) {
       console.error("Failed to fetch products:", err)
-      alert(`Failed to fetch products: ${err.response?.data?.message || err.message}`)
     }
   }
 
@@ -116,6 +97,7 @@ const AdminBannerUpload = () => {
     return product?.variants?.[selectedVariantIndex]
   }
 
+  // Filter products based on search term
   const filteredProducts = products.filter((product) =>
     product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
   )
@@ -126,94 +108,73 @@ const AdminBannerUpload = () => {
       return
     }
 
-    setLoading(true)
+    const formData = new FormData()
+    formData.append("type", type)
+
+    // Handle product-based banners
+    if (type === "product-type" || type === "side") {
+      if (!selectedProductId) {
+        alert("Please select a product")
+        return
+      }
+
+      const product = getSelectedProduct()
+      const variant = getSelectedVariant()
+
+      if (!product || !variant) {
+        alert("Invalid product or variant selection")
+        return
+      }
+
+      formData.append("productId", selectedProductId)
+      formData.append("selectedVariantIndex", selectedVariantIndex.toString())
+      formData.append("productImageUrl", product.images?.others?.[0] || "")
+      formData.append("title", product.title)
+      formData.append("price", variant.price.toString())
+      formData.append("discountPercent", (variant.discountPercent || 0).toString())
+
+      // Calculate old price if discount exists
+      if (variant.discountPercent > 0) {
+        const oldPrice = variant.price / (1 - variant.discountPercent / 100)
+        formData.append("oldPrice", oldPrice.toFixed(2))
+      }
+
+      // Extract weight from variant size
+      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+      if (sizeMatch) {
+        formData.append("weightValue", sizeMatch[1])
+        formData.append("weightUnit", sizeMatch[2])
+      }
+    } else {
+      // Handle regular banners (slider, offer)
+      if (!image) {
+        alert("Please select an image")
+        return
+      }
+
+      const hash = await computeFileHash(image)
+      formData.append("image", image)
+      formData.append("hash", hash)
+    }
 
     try {
-      const formData = new FormData()
-      formData.append("type", type)
-
-      // Handle product-based banners
-      if (type === "product-type" || type === "side") {
-        if (!selectedProductId) {
-          alert("Please select a product")
-          return
-        }
-
-        const product = getSelectedProduct()
-        const variant = getSelectedVariant()
-
-        if (!product || !variant) {
-          alert("Invalid product or variant selection")
-          return
-        }
-
-        console.log("Uploading product banner:", {
-          productId: selectedProductId,
-          productTitle: product.title,
-          variantIndex: selectedVariantIndex,
+      if (editingBanner) {
+        await axios.put(`${API_BASE}/api/banners/${editingBanner._id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
         })
-
-        formData.append("productId", selectedProductId)
-        formData.append("selectedVariantIndex", selectedVariantIndex.toString())
-        formData.append("productImageUrl", product.images?.others?.[0] || "")
-        formData.append("title", product.title)
-        formData.append("price", variant.price.toString())
-        formData.append("discountPercent", (variant.discountPercent || 0).toString())
-
-        // Calculate old price if discount exists
-        if (variant.discountPercent > 0) {
-          const oldPrice = variant.price / (1 - variant.discountPercent / 100)
-          formData.append("oldPrice", oldPrice.toFixed(2))
-        }
-
-        // Extract weight from variant size
-        const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
-        if (sizeMatch) {
-          formData.append("weightValue", sizeMatch[1])
-          formData.append("weightUnit", sizeMatch[2])
-        }
+        alert("Banner updated successfully")
       } else {
-        // Handle regular banners (slider, offer)
-        if (!image) {
-          alert("Please select an image")
-          return
-        }
-
-        console.log("Uploading regular banner with image")
-        const hash = await computeFileHash(image)
-        formData.append("image", image)
-        formData.append("hash", hash)
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        alert("Banner uploaded successfully")
       }
 
-      // Log form data for debugging
-      for (const pair of formData.entries()) {
-        console.log(`${pair[0]}:`, pair[1])
-      }
-
-      const url = editingBanner ? `${API_BASE}/api/banners/${editingBanner._id}` : `${API_BASE}/api/banners/upload`
-
-      const method = editingBanner ? "put" : "post"
-
-      console.log(`Making ${method.toUpperCase()} request to:`, url)
-
-      const response = await axios[method](url, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        timeout: 30000,
-      })
-
-      console.log("Upload response:", response.data)
-      alert(editingBanner ? "Banner updated successfully" : "Banner uploaded successfully")
-
-      await fetchBanners()
+      fetchBanners()
       resetForm()
     } catch (err) {
       console.error("Upload error:", err)
-      const errorMessage = err.response?.data?.message || err.message || "Upload failed"
-      alert(`Upload failed: ${errorMessage}`)
-    } finally {
-      setLoading(false)
+      alert(err.response?.data?.message || "Upload failed")
     }
   }
 
@@ -232,11 +193,10 @@ const AdminBannerUpload = () => {
     if (confirm("Are you sure you want to delete this banner?")) {
       try {
         await axios.delete(`${API_BASE}/api/banners/${id}`)
-        await fetchBanners()
+        fetchBanners()
         alert("Banner deleted successfully")
       } catch (err) {
-        console.error("Delete error:", err)
-        alert(`Failed to delete banner: ${err.response?.data?.message || err.message}`)
+        alert("Failed to delete banner")
       }
     }
   }
@@ -366,19 +326,12 @@ const AdminBannerUpload = () => {
           <div className="flex gap-2">
             <button
               onClick={handleUpload}
-              disabled={loading}
-              className={`text-white px-4 py-2 rounded ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : editingBanner
-                    ? "bg-orange-500 hover:bg-orange-600"
-                    : "bg-green-600 hover:bg-green-700"
-              }`}
+              className={`text-white px-4 py-2 rounded ${editingBanner ? "bg-orange-500" : "bg-green-600"}`}
             >
-              {loading ? "Processing..." : editingBanner ? "Update Banner" : "Upload Banner"}
+              {editingBanner ? "Update Banner" : "Upload Banner"}
             </button>
             {editingBanner && (
-              <button onClick={resetForm} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
+              <button onClick={resetForm} className="bg-gray-400 text-white px-4 py-2 rounded">
                 Cancel
               </button>
             )}
@@ -386,7 +339,7 @@ const AdminBannerUpload = () => {
         </div>
       )}
 
-      {/* Show Uploaded Products */}
+      {/* Show Uploaded Products instead of search */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-3">Products Added to Banners ({uploadedProducts.length})</h3>
         {uploadedProducts.length > 0 ? (
@@ -419,9 +372,6 @@ const AdminBannerUpload = () => {
                   src={`${API_BASE}${banner.imageUrl}`}
                   alt={banner.title || banner.type}
                   className="w-full h-40 object-cover rounded mb-2"
-                  onError={(e) => {
-                    e.target.src = "/placeholder.svg?height=160&width=300"
-                  }}
                 />
                 {banner.discountPercent > 0 && (
                   <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
@@ -454,13 +404,13 @@ const AdminBannerUpload = () => {
               <div className="flex justify-between mt-3">
                 <button
                   onClick={() => handleEdit(banner)}
-                  className="bg-yellow-500 text-white px-3 py-1 text-sm rounded hover:bg-yellow-600"
+                  className="bg-yellow-500 text-white px-3 py-1 text-sm rounded"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(banner._id)}
-                  className="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600"
+                  className="bg-red-500 text-white px-3 py-1 text-sm rounded"
                 >
                   Delete
                 </button>
