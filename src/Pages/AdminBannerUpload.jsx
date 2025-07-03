@@ -341,25 +341,7 @@ const AdminBannerUpload = () => {
 
       {/* Show Uploaded Products instead of search */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-3">Products Added to Banners ({uploadedProducts.length})</h3>
-        {uploadedProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {uploadedProducts.map((product) => (
-              <div key={product._id} className="border rounded p-2 text-center">
-                {product.images?.others?.[0] && (
-                  <img
-                    src={`${API_BASE}${product.images.others[0]}`}
-                    alt={product.title}
-                    className="w-full h-20 object-cover rounded mb-1"
-                  />
-                )}
-                <p className="text-xs font-medium truncate">{product.title}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">No products added to banners yet.</p>
-        )}
+        <h3 className="text-lg font-semibold mb-3">Uploaded Banners</h3>
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
