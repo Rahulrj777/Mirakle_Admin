@@ -2,339 +2,291 @@
 
 import { useState, useEffect } from "react"
 import axios from "axios"
+import SparkMD5 from "spark-md5"
 import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
+  const [image, setImage] = useState(null)
+  const [type, setType] = useState("slider")
   const [banners, setBanners] = useState([])
   const [products, setProducts] = useState([])
-  const [selectedType, setSelectedType] = useState("slider")
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [selectedProductId, setSelectedProductId] = useState("")
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
+  const [editingBanner, setEditingBanner] = useState(null)
+  const [productSearchTerm, setProductSearchTerm] = useState("")
+
+  const computeFileHash = (file) => {
+    return new Promise((resolve, reject) => {
+      const chunkSize = 2097152
+      const spark = new SparkMD5.ArrayBuffer()
+      const fileReader = new FileReader()
+      let cursor = 0
+
+      fileReader.onload = (e) => {
+        spark.append(e.target.result)
+        cursor += chunkSize
+        if (cursor < file.size) {
+          readNext()
+        } else {
+          resolve(spark.end())
+        }
+      }
+
+      fileReader.onerror = () => reject("File reading error")
+
+      function readNext() {
+        const slice = file.slice(cursor, cursor + chunkSize)
+        fileReader.readAsArrayBuffer(slice)
+      }
+
+      readNext()
+    })
+  }
+
+  const fetchBanners = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/banners`)
+      setBanners(res.data)
+    } catch (err) {
+      console.error("Failed to fetch banners:", err)
+    }
+  }
+
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/products/all-products`)
+      setProducts(res.data)
+    } catch (err) {
+      console.error("Failed to fetch products:", err)
+    }
+  }
 
   useEffect(() => {
     fetchBanners()
     fetchProducts()
   }, [])
 
-  const fetchBanners = async () => {
-    try {
-      console.log("Fetching banners from:", `${API_BASE}/api/banners`)
-      const res = await axios.get(`${API_BASE}/api/banners`)
-      console.log("Banners fetched:", res.data.length)
-      setBanners(res.data)
-    } catch (err) {
-      console.error("Failed to fetch banners:", err)
-      alert("Failed to fetch banners: " + (err.response?.data?.message || err.message))
-    }
-  }
+  const handleImageChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
 
-  const fetchProducts = async () => {
-    try {
-      console.log("Fetching products from:", `${API_BASE}/api/products/all-products`)
-      const res = await axios.get(`${API_BASE}/api/products/all-products`)
-      console.log("Products fetched:", res.data.length)
-      setProducts(res.data)
-    } catch (err) {
-      console.error("Failed to fetch products:", err)
-      alert("Failed to fetch products: " + (err.response?.data?.message || err.message))
-    }
-  }
-
-  const calculateHash = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const arrayBuffer = e.target.result
-        const hashArray = Array.from(new Uint8Array(arrayBuffer))
-        const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
-        resolve(hashHex.substring(0, 32))
-      }
-      reader.readAsArrayBuffer(file)
-    })
-  }
-
-  const handleUpload = async () => {
-    if (!selectedType) {
-      alert("Please select a banner type")
+    if (!file.type.startsWith("image/")) {
+      alert("Only image files are allowed")
       return
     }
 
-    setIsUploading(true)
+    setImage(file)
+  }
 
-    try {
-      const formData = new FormData()
-      formData.append("type", selectedType)
+  const resetForm = () => {
+    setImage(null)
+    setSelectedProductId("")
+    setSelectedVariantIndex(0)
+    setEditingBanner(null)
+    setProductSearchTerm("")
+    const fileInput = document.getElementById("banner-file")
+    if (fileInput) fileInput.value = ""
+  }
 
-      if (selectedType === "product-type" || selectedType === "side") {
-        // Product-based banner
-        if (!selectedProduct) {
-          alert("Please select a product")
-          setIsUploading(false)
-          return
-        }
+  const getSelectedProduct = () => {
+    return products.find((p) => p._id === selectedProductId)
+  }
 
-        console.log("Uploading product banner:", {
-          productId: selectedProduct._id,
-          productTitle: selectedProduct.title,
-          variantIndex: selectedVariantIndex,
-        })
+  const getSelectedVariant = () => {
+    const product = getSelectedProduct()
+    return product?.variants?.[selectedVariantIndex]
+  }
 
-        const selectedVariant = selectedProduct.variants[selectedVariantIndex]
-        const discountPercent = selectedVariant?.discountPercent || 0
-        const price = selectedVariant?.price || 0
-        const oldPrice = discountPercent > 0 ? price / (1 - discountPercent / 100) : price
+  // Filter products based on search term
+  const filteredProducts = products.filter((product) =>
+    product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
+  )
 
-        // Extract size info
-        const sizeMatch = selectedVariant?.size?.match(/^([\d.]+)([a-zA-Z]+)$/)
-        const weightValue = sizeMatch ? sizeMatch[1] : ""
-        const weightUnit = sizeMatch ? sizeMatch[2] : ""
+  const handleUpload = async () => {
+    if (type === "all") {
+      alert("Cannot upload when 'Show All' is selected")
+      return
+    }
 
-        formData.append("productId", selectedProduct._id)
-        formData.append("selectedVariantIndex", selectedVariantIndex.toString())
-        formData.append("productImageUrl", selectedProduct.images?.others?.[0] || "")
-        formData.append("title", selectedProduct.title)
-        formData.append("price", price.toString())
-        formData.append("discountPercent", discountPercent.toString())
-        formData.append("oldPrice", oldPrice.toFixed(2))
-        formData.append("weightValue", weightValue)
-        formData.append("weightUnit", weightUnit)
-      } else {
-        // Regular banner with image
-        if (!selectedFile) {
-          alert("Please select an image file")
-          setIsUploading(false)
-          return
-        }
+    const formData = new FormData()
+    formData.append("type", type)
 
-        console.log("Uploading regular banner with image")
-        console.log("type:", selectedType)
-        console.log("image:", selectedFile)
-
-        const hash = await calculateHash(selectedFile)
-        console.log("hash:", hash)
-
-        formData.append("image", selectedFile)
-        formData.append("hash", hash)
+    // Handle product-based banners
+    if (type === "product-type" || type === "side") {
+      if (!selectedProductId) {
+        alert("Please select a product")
+        return
       }
 
-      console.log("Making POST request to:", `${API_BASE}/api/banners/upload`)
+      const product = getSelectedProduct()
+      const variant = getSelectedVariant()
 
-      const response = await axios.post(`${API_BASE}/api/banners/upload`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      })
+      if (!product || !variant) {
+        alert("Invalid product or variant selection")
+        return
+      }
 
-      console.log("Upload response:", response.data)
-      alert("Banner uploaded successfully!")
+      formData.append("productId", selectedProductId)
+      formData.append("selectedVariantIndex", selectedVariantIndex.toString())
+      formData.append("productImageUrl", product.images?.others?.[0] || "")
+      formData.append("title", product.title)
+      formData.append("price", variant.price.toString())
+      formData.append("discountPercent", (variant.discountPercent || 0).toString())
 
-      // Reset form
-      setSelectedFile(null)
-      setSelectedProduct(null)
-      setSelectedVariantIndex(0)
+      // Calculate old price if discount exists
+      if (variant.discountPercent > 0) {
+        const oldPrice = variant.price / (1 - variant.discountPercent / 100)
+        formData.append("oldPrice", oldPrice.toFixed(2))
+      }
 
-      // Refresh banners
+      // Extract weight from variant size
+      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+      if (sizeMatch) {
+        formData.append("weightValue", sizeMatch[1])
+        formData.append("weightUnit", sizeMatch[2])
+      }
+    } else {
+      // Handle regular banners (slider, offer)
+      if (!image) {
+        alert("Please select an image")
+        return
+      }
+
+      const hash = await computeFileHash(image)
+      formData.append("image", image)
+      formData.append("hash", hash)
+    }
+
+    try {
+      if (editingBanner) {
+        await axios.put(`${API_BASE}/api/banners/${editingBanner._id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        alert("Banner updated successfully")
+      } else {
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        alert("Banner uploaded successfully")
+      }
+
       fetchBanners()
+      resetForm()
     } catch (err) {
       console.error("Upload error:", err)
-      alert("Upload failed: " + (err.response?.data?.message || err.message))
-    } finally {
-      setIsUploading(false)
+      alert(err.response?.data?.message || "Upload failed")
     }
   }
 
-  const handleDelete = async (bannerId) => {
-    if (!confirm("Are you sure you want to delete this banner?")) return
-
-    try {
-      await axios.delete(`${API_BASE}/api/banners/${bannerId}`)
-      alert("Banner deleted successfully!")
-      fetchBanners()
-    } catch (err) {
-      console.error("Delete error:", err)
-      alert("Delete failed: " + (err.response?.data?.message || err.message))
-    }
+  const handleEdit = (banner) => {
+    setEditingBanner(banner)
+    setType(banner.type)
+    setSelectedProductId(banner.productId || "")
+    setSelectedVariantIndex(banner.selectedVariantIndex || 0)
+    setImage(null)
+    const fileInput = document.getElementById("banner-file")
+    if (fileInput) fileInput.value = ""
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
-  // 🚨 FIXED: Handle product navigation properly
-  const handleProductClick = (banner) => {
-    console.log("🔍 Banner object:", banner)
-    console.log("🔍 ProductId type:", typeof banner.productId)
-    console.log("🔍 ProductId value:", banner.productId)
-
-    let productId = null
-
-    // Handle different cases of productId
-    if (banner.productId) {
-      if (typeof banner.productId === "string") {
-        // Case 1: productId is a string
-        productId = banner.productId
-        console.log("✅ Using string productId:", productId)
-      } else if (typeof banner.productId === "object" && banner.productId._id) {
-        // Case 2: productId is a populated object with _id
-        productId = banner.productId._id
-        console.log("✅ Using object._id:", productId)
-      } else if (typeof banner.productId === "object" && banner.productId.toString) {
-        // Case 3: productId is an ObjectId that can be converted to string
-        productId = banner.productId.toString()
-        console.log("✅ Using toString():", productId)
+  const handleDelete = async (id) => {
+    if (confirm("Are you sure you want to delete this banner?")) {
+      try {
+        await axios.delete(`${API_BASE}/api/banners/${id}`)
+        fetchBanners()
+        alert("Banner deleted successfully")
+      } catch (err) {
+        alert("Failed to delete banner")
       }
     }
-
-    if (productId && typeof productId === "string" && productId.length > 0) {
-      const url = `https://mirakle-client.vercel.app/product/${productId}`
-      console.log("🚀 Navigating to:", url)
-      window.open(url, "_blank")
-    } else {
-      console.error("❌ Invalid product ID:", banner.productId)
-      alert("Invalid product ID. Cannot navigate to product page.")
-    }
   }
 
-  const renderBanner = (banner) => {
-    const isProductBanner = banner.type === "product-type" || banner.type === "side"
+  const selectedProduct = getSelectedProduct()
+  const selectedVariant = getSelectedVariant()
 
-    return (
-      <div key={banner._id} className="border rounded-lg p-4 shadow-md">
-        <div className="flex justify-between items-start mb-2">
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">{banner.type}</span>
-          <button onClick={() => handleDelete(banner._id)} className="text-red-500 hover:text-red-700 text-sm">
-            Delete
-          </button>
-        </div>
-
-        {isProductBanner ? (
-          <div className="space-y-2">
-            <div className="aspect-video bg-gray-100 rounded overflow-hidden">
-              {banner.imageUrl ? (
-                <img src={`${API_BASE}${banner.imageUrl}`} alt={banner.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-500">No Image</div>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="font-semibold text-lg">{banner.title}</h3>
-
-              {banner.price && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg font-bold text-green-600">₹{banner.price}</span>
-                  {banner.oldPrice && banner.oldPrice > banner.price && (
-                    <span className="text-sm text-gray-500 line-through">₹{banner.oldPrice}</span>
-                  )}
-                  {banner.discountPercent > 0 && (
-                    <span className="text-sm bg-red-100 text-red-800 px-2 py-1 rounded">
-                      {banner.discountPercent}% OFF
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {banner.weight && (
-                <p className="text-sm text-gray-600">
-                  Weight: {banner.weight.value}
-                  {banner.weight.unit}
-                </p>
-              )}
-
-              <button
-                onClick={() => handleProductClick(banner)}
-                className="w-full mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-              >
-                View Product
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="aspect-video bg-gray-100 rounded overflow-hidden">
-              <img
-                src={`${API_BASE}${banner.imageUrl}`}
-                alt={banner.title || "Banner"}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {banner.title && <h3 className="font-semibold">{banner.title}</h3>}
-          </div>
-        )}
-      </div>
-    )
+  // Get uploaded products for display
+  const getUploadedProducts = () => {
+    const productBanners = banners.filter((b) => b.type === "product-type" || b.type === "side")
+    const uploadedProductIds = [...new Set(productBanners.map((b) => b.productId))]
+    return products.filter((p) => uploadedProductIds.includes(p._id))
   }
+
+  const uploadedProducts = getUploadedProducts()
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">Banner Management</h1>
+    <div className="p-6 max-w-5xl mx-auto">
+      <h2 className="text-2xl font-bold mb-4">Admin Banner Upload Panel</h2>
 
-      {/* Upload Section */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Upload New Banner</h2>
+      <select
+        value={type}
+        onChange={(e) => setType(e.target.value)}
+        className={`border p-2 w-full mb-4 ${editingBanner ? "bg-gray-100 cursor-not-allowed" : ""}`}
+        disabled={!!editingBanner}
+      >
+        <option value="all">Show All (View Only)</option>
+        <option value="slider">Banner</option>
+        <option value="side">Top Selling Product's</option>
+        <option value="offer">Offer Zone</option>
+        <option value="product-type">Our Special Product's</option>
+      </select>
 
-        <div className="space-y-4">
-          {/* Banner Type Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Banner Type</label>
-            <select
-              value={selectedType}
-              onChange={(e) => {
-                setSelectedType(e.target.value)
-                setSelectedFile(null)
-                setSelectedProduct(null)
-              }}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="slider">Slider Banner (Max 5)</option>
-              <option value="side">Side Banner (Max 3)</option>
-              <option value="offer">Offer Banner (Max 1)</option>
-              <option value="product-type">Product Banner (Max 10)</option>
-            </select>
-          </div>
+      {type !== "all" && (
+        <div className="bg-white shadow p-4 rounded mb-6">
+          {/* Product Selection for product-related banners */}
+          {(type === "product-type" || type === "side") && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Select Product:</label>
 
-          {/* Conditional Inputs */}
-          {selectedType === "product-type" || selectedType === "side" ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Product</label>
-                <select
-                  value={selectedProduct?._id || ""}
-                  onChange={(e) => {
-                    const product = products.find((p) => p._id === e.target.value)
-                    setSelectedProduct(product)
-                    setSelectedVariantIndex(0)
-                  }}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Choose a product...</option>
-                  {products.map((product) => (
-                    <option key={product._id} value={product._id}>
-                      {product.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Product Search */}
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={productSearchTerm}
+                onChange={(e) => setProductSearchTerm(e.target.value)}
+                className="mb-2 p-2 border w-full rounded"
+              />
 
-              {selectedProduct && selectedProduct.variants && selectedProduct.variants.length > 1 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Variant</label>
+              <select
+                value={selectedProductId}
+                onChange={(e) => {
+                  setSelectedProductId(e.target.value)
+                  setSelectedVariantIndex(0)
+                }}
+                className="mb-2 p-2 border w-full"
+                size="5"
+              >
+                <option value="">-- Select a Product --</option>
+                {filteredProducts.map((product) => (
+                  <option key={product._id} value={product._id}>
+                    {product.title}
+                  </option>
+                ))}
+              </select>
+
+              {/* Variant Selection */}
+              {selectedProduct && selectedProduct.variants?.length > 1 && (
+                <div className="mb-2">
+                  <label className="block text-sm font-medium mb-1">Select Variant:</label>
                   <select
                     value={selectedVariantIndex}
                     onChange={(e) => setSelectedVariantIndex(Number.parseInt(e.target.value))}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="p-2 border w-full"
                   >
                     {selectedProduct.variants.map((variant, index) => (
                       <option key={index} value={index}>
                         {variant.size} - ₹{variant.price}
+                        {variant.discountPercent > 0 && ` (${variant.discountPercent}% off)`}
                       </option>
                     ))}
                   </select>
                 </div>
               )}
 
-              {selectedProduct && (
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium mb-2">Preview:</h3>
-                  <div className="flex items-center space-x-4">
+              {/* Product Preview */}
+              {selectedProduct && selectedVariant && (
+                <div className="bg-gray-50 p-3 rounded border">
+                  <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
+                  <div className="flex gap-3">
                     {selectedProduct.images?.others?.[0] && (
                       <img
                         src={`${API_BASE}${selectedProduct.images.others[0]}`}
@@ -342,69 +294,129 @@ const AdminBannerUpload = () => {
                         className="w-16 h-16 object-cover rounded"
                       />
                     )}
-                    <div>
+                    <div className="text-sm">
                       <p className="font-medium">{selectedProduct.title}</p>
-                      {selectedProduct.variants?.[selectedVariantIndex] && (
-                        <p className="text-sm text-gray-600">
-                          {selectedProduct.variants[selectedVariantIndex].size} - ₹
-                          {selectedProduct.variants[selectedVariantIndex].price}
-                        </p>
+                      <p className="text-gray-600">{selectedVariant.size}</p>
+                      <p className="text-green-600 font-semibold">₹{selectedVariant.price}</p>
+                      {selectedVariant.discountPercent > 0 && (
+                        <p className="text-red-500 text-xs">{selectedVariant.discountPercent}% OFF</p>
                       )}
                     </div>
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Image</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setSelectedFile(e.target.files[0])}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              {selectedFile && (
-                <div className="mt-2">
-                  <img
-                    src={URL.createObjectURL(selectedFile) || "/placeholder.svg"}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded"
-                  />
-                </div>
-              )}
-            </div>
           )}
 
-          <button
-            onClick={handleUpload}
-            disabled={isUploading}
-            className={`w-full py-2 px-4 rounded-md font-medium ${
-              isUploading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            } text-white transition-colors`}
-          >
-            {isUploading ? "Uploading..." : "Upload Banner"}
-          </button>
+          {/* Image Upload only for non-product banners */}
+          {(type === "slider" || type === "offer") && (
+            <>
+              <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
+
+              {image && (
+                <img
+                  src={URL.createObjectURL(image) || "/placeholder.svg"}
+                  alt="Preview"
+                  className="mb-4 w-full h-64 object-cover rounded border"
+                />
+              )}
+            </>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleUpload}
+              className={`text-white px-4 py-2 rounded ${editingBanner ? "bg-orange-500" : "bg-green-600"}`}
+            >
+              {editingBanner ? "Update Banner" : "Upload Banner"}
+            </button>
+            {editingBanner && (
+              <button onClick={resetForm} className="bg-gray-400 text-white px-4 py-2 rounded">
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Show Uploaded Products instead of search */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-3">Products Added to Banners ({uploadedProducts.length})</h3>
+        {uploadedProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {uploadedProducts.map((product) => (
+              <div key={product._id} className="border rounded p-2 text-center">
+                {product.images?.others?.[0] && (
+                  <img
+                    src={`${API_BASE}${product.images.others[0]}`}
+                    alt={product.title}
+                    className="w-full h-20 object-cover rounded mb-1"
+                  />
+                )}
+                <p className="text-xs font-medium truncate">{product.title}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No products added to banners yet.</p>
+        )}
       </div>
 
-      {/* Banners Display */}
-      <div className="space-y-6">
-        {["slider", "side", "offer", "product-type"].map((type) => {
-          const typeBanners = banners.filter((banner) => banner.type === type)
-          if (typeBanners.length === 0) return null
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        {banners
+          .filter((b) => type === "all" || b.type === type)
+          .map((banner) => (
+            <div key={banner._id} className="border p-3 rounded shadow relative">
+              <div className="relative">
+                <img
+                  src={`${API_BASE}${banner.imageUrl}`}
+                  alt={banner.title || banner.type}
+                  className="w-full h-40 object-cover rounded mb-2"
+                />
+                {banner.discountPercent > 0 && (
+                  <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                    {banner.discountPercent}% OFF
+                  </span>
+                )}
+              </div>
 
-          return (
-            <div key={type}>
-              <h2 className="text-xl font-semibold mb-4 capitalize">
-                {type.replace("-", " ")} Banners ({typeBanners.length})
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {typeBanners.map(renderBanner)}
+              {banner.title && <div className="text-sm text-center font-medium mt-1">{banner.title}</div>}
+
+              {(banner.type === "product-type" || banner.type === "side") && banner.price > 0 && (
+                <div className="text-center text-sm mt-1">
+                  <span className="text-green-700 font-semibold">
+                    ₹ {Number.parseFloat(banner.price || 0).toFixed(0)}
+                  </span>
+                  {banner.oldPrice > 0 && (
+                    <span className="text-gray-400 line-through ml-2 text-xs">
+                      ₹ {Number.parseFloat(banner.oldPrice).toFixed(0)}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {banner.weight?.value > 0 && (
+                <div className="text-gray-500 text-center text-xs">
+                  {banner.weight.value} {banner.weight.unit}
+                </div>
+              )}
+
+              <div className="flex justify-between mt-3">
+                <button
+                  onClick={() => handleEdit(banner)}
+                  className="bg-yellow-500 text-white px-3 py-1 text-sm rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(banner._id)}
+                  className="bg-red-500 text-white px-3 py-1 text-sm rounded"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-          )
-        })}
+          ))}
       </div>
     </div>
   )
