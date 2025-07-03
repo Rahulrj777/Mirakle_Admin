@@ -14,6 +14,7 @@ const AdminBannerUpload = () => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingBanner, setEditingBanner] = useState(null)
+  const [productSearchTerm, setProductSearchTerm] = useState("")
 
   const computeFileHash = (file) => {
     return new Promise((resolve, reject) => {
@@ -83,7 +84,9 @@ const AdminBannerUpload = () => {
     setSelectedProductId("")
     setSelectedVariantIndex(0)
     setEditingBanner(null)
-    document.getElementById("banner-file").value = ""
+    setProductSearchTerm("")
+    const fileInput = document.getElementById("banner-file")
+    if (fileInput) fileInput.value = ""
   }
 
   const getSelectedProduct = () => {
@@ -95,16 +98,30 @@ const AdminBannerUpload = () => {
     return product?.variants?.[selectedVariantIndex]
   }
 
+  // Filter products based on search term
+  const filteredProducts = products.filter((product) =>
+    product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
+  )
+
   const handleUpload = async () => {
     if (type === "all") {
       alert("Cannot upload when 'Show All' is selected")
       return
     }
 
-    // For product-related banners, require product selection
-    if ((type === "product-type" || type === "side") && !selectedProductId) {
-      alert("Please select a product")
-      return
+    // For product-related banners, require product selection instead of image upload
+    if (type === "product-type" || type === "side") {
+      if (!selectedProductId) {
+        alert("Please select a product")
+        return
+      }
+      // No need for image upload for product-based banners
+    } else {
+      // For other banner types, require image upload
+      if (!image) {
+        alert("Please select an image")
+        return
+      }
     }
 
     const formData = new FormData()
@@ -118,11 +135,22 @@ const AdminBannerUpload = () => {
       formData.append("productId", selectedProductId)
       formData.append("selectedVariantIndex", selectedVariantIndex.toString())
 
+      // Use product image instead of uploaded image
+      if (product?.images?.others?.[0]) {
+        formData.append("productImageUrl", product.images.others[0])
+      }
+
       // Add product details for display
       if (product && variant) {
         formData.append("title", product.title)
         formData.append("price", variant.price.toString())
         formData.append("discountPercent", (variant.discountPercent || 0).toString())
+
+        // Calculate old price if discount exists
+        if (variant.discountPercent > 0) {
+          const oldPrice = variant.price / (1 - variant.discountPercent / 100)
+          formData.append("oldPrice", oldPrice.toString())
+        }
 
         // Calculate weight from variant size
         const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
@@ -134,7 +162,8 @@ const AdminBannerUpload = () => {
     }
 
     if (editingBanner) {
-      if (image) {
+      // For non-product banners, handle image upload
+      if (image && (type === "slider" || type === "offer")) {
         const hash = await computeFileHash(image)
         formData.append("image", image)
         formData.append("hash", hash)
@@ -151,20 +180,17 @@ const AdminBannerUpload = () => {
         alert(err.response?.data?.message || "Failed to update banner")
       }
     } else {
-      if (!image) {
-        alert("Please select an image")
-        return
+      // For non-product banners, handle image upload and hash checking
+      if (type === "slider" || type === "offer") {
+        const hash = await computeFileHash(image)
+        const existing = banners.find((b) => b.hash === hash && b.type === type)
+        if (existing) {
+          alert("This image already exists in the selected type.")
+          return
+        }
+        formData.append("image", image)
+        formData.append("hash", hash)
       }
-
-      const hash = await computeFileHash(image)
-      const existing = banners.find((b) => b.hash === hash && b.type === type)
-      if (existing) {
-        alert("This image already exists in the selected type.")
-        return
-      }
-
-      formData.append("image", image)
-      formData.append("hash", hash)
 
       try {
         await axios.post(`${API_BASE}/api/banners/upload`, formData, {
@@ -185,7 +211,8 @@ const AdminBannerUpload = () => {
     setSelectedProductId(banner.productId || "")
     setSelectedVariantIndex(banner.selectedVariantIndex || 0)
     setImage(null)
-    document.getElementById("banner-file").value = ""
+    const fileInput = document.getElementById("banner-file")
+    if (fileInput) fileInput.value = ""
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -224,6 +251,16 @@ const AdminBannerUpload = () => {
           {(type === "product-type" || type === "side") && (
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Product:</label>
+
+              {/* Product Search */}
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={productSearchTerm}
+                onChange={(e) => setProductSearchTerm(e.target.value)}
+                className="mb-2 p-2 border w-full rounded"
+              />
+
               <select
                 value={selectedProductId}
                 onChange={(e) => {
@@ -231,9 +268,10 @@ const AdminBannerUpload = () => {
                   setSelectedVariantIndex(0) // Reset variant selection
                 }}
                 className="mb-2 p-2 border w-full"
+                size="5"
               >
                 <option value="">-- Select a Product --</option>
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <option key={product._id} value={product._id}>
                     {product.title}
                   </option>
@@ -285,14 +323,19 @@ const AdminBannerUpload = () => {
             </div>
           )}
 
-          <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
+          {/* Image Upload only for non-product banners */}
+          {(type === "slider" || type === "offer") && (
+            <>
+              <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
 
-          {image && (
-            <img
-              src={URL.createObjectURL(image) || "/placeholder.svg"}
-              alt="Preview"
-              className="mb-4 w-full h-64 object-cover rounded border"
-            />
+              {image && (
+                <img
+                  src={URL.createObjectURL(image) || "/placeholder.svg"}
+                  alt="Preview"
+                  className="mb-4 w-full h-64 object-cover rounded border"
+                />
+              )}
+            </>
           )}
 
           <div className="flex gap-2">
@@ -323,15 +366,14 @@ const AdminBannerUpload = () => {
           .filter((b) => {
             const matchesType = type === "all" || b.type === type
             const matchesSearch = b.title?.toLowerCase().includes(searchTerm.toLowerCase())
-            const isValid = b.type === "product-type" ? b.price > 0 : true
-            return matchesType && matchesSearch && isValid
+            return matchesType && matchesSearch
           })
           .map((banner) => (
             <div key={banner._id} className="border p-3 rounded shadow relative">
               <div className="relative">
                 <img
-                  src={`${API_BASE}${banner.imageUrl}`}
-                  alt={banner.type}
+                  src={`${API_BASE}${banner.imageUrl || banner.productImageUrl}`}
+                  alt={banner.title || banner.type}
                   className="w-full h-40 object-cover rounded mb-2"
                 />
                 {banner.discountPercent > 0 && (
@@ -343,7 +385,7 @@ const AdminBannerUpload = () => {
 
               {banner.title && <div className="text-sm text-center font-medium mt-1">{banner.title}</div>}
 
-              {(banner.type === "product-type" || banner.price > 0) && (
+              {(banner.type === "product-type" || banner.type === "side") && banner.price > 0 && (
                 <div className="text-center text-sm mt-1">
                   <span className="text-green-700 font-semibold">
                     ₹ {Number.parseFloat(banner.price || 0).toFixed(0)}
