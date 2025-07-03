@@ -12,7 +12,6 @@ const AdminBannerUpload = () => {
   const [products, setProducts] = useState([])
   const [selectedProductId, setSelectedProductId] = useState("")
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
-  const [searchTerm, setSearchTerm] = useState("")
   const [editingBanner, setEditingBanner] = useState(null)
   const [productSearchTerm, setProductSearchTerm] = useState("")
 
@@ -109,99 +108,73 @@ const AdminBannerUpload = () => {
       return
     }
 
-    // For product-related banners, require product selection instead of image upload
+    const formData = new FormData()
+    formData.append("type", type)
+
+    // Handle product-based banners
     if (type === "product-type" || type === "side") {
       if (!selectedProductId) {
         alert("Please select a product")
         return
       }
-      // No need for image upload for product-based banners
+
+      const product = getSelectedProduct()
+      const variant = getSelectedVariant()
+
+      if (!product || !variant) {
+        alert("Invalid product or variant selection")
+        return
+      }
+
+      formData.append("productId", selectedProductId)
+      formData.append("selectedVariantIndex", selectedVariantIndex.toString())
+      formData.append("productImageUrl", product.images?.others?.[0] || "")
+      formData.append("title", product.title)
+      formData.append("price", variant.price.toString())
+      formData.append("discountPercent", (variant.discountPercent || 0).toString())
+
+      // Calculate old price if discount exists
+      if (variant.discountPercent > 0) {
+        const oldPrice = variant.price / (1 - variant.discountPercent / 100)
+        formData.append("oldPrice", oldPrice.toFixed(2))
+      }
+
+      // Extract weight from variant size
+      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+      if (sizeMatch) {
+        formData.append("weightValue", sizeMatch[1])
+        formData.append("weightUnit", sizeMatch[2])
+      }
     } else {
-      // For other banner types, require image upload
+      // Handle regular banners (slider, offer)
       if (!image) {
         alert("Please select an image")
         return
       }
+
+      const hash = await computeFileHash(image)
+      formData.append("image", image)
+      formData.append("hash", hash)
     }
 
-    const formData = new FormData()
-    formData.append("type", type)
-
-    // Add product information for product-related banners
-    if (type === "product-type" || type === "side") {
-      const product = getSelectedProduct()
-      const variant = getSelectedVariant()
-
-      formData.append("productId", selectedProductId)
-      formData.append("selectedVariantIndex", selectedVariantIndex.toString())
-
-      // Use product image instead of uploaded image
-      if (product?.images?.others?.[0]) {
-        formData.append("productImageUrl", product.images.others[0])
-      }
-
-      // Add product details for display
-      if (product && variant) {
-        formData.append("title", product.title)
-        formData.append("price", variant.price.toString())
-        formData.append("discountPercent", (variant.discountPercent || 0).toString())
-
-        // Calculate old price if discount exists
-        if (variant.discountPercent > 0) {
-          const oldPrice = variant.price / (1 - variant.discountPercent / 100)
-          formData.append("oldPrice", oldPrice.toString())
-        }
-
-        // Calculate weight from variant size
-        const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
-        if (sizeMatch) {
-          formData.append("weightValue", sizeMatch[1])
-          formData.append("weightUnit", sizeMatch[2])
-        }
-      }
-    }
-
-    if (editingBanner) {
-      // For non-product banners, handle image upload
-      if (image && (type === "slider" || type === "offer")) {
-        const hash = await computeFileHash(image)
-        formData.append("image", image)
-        formData.append("hash", hash)
-      }
-
-      try {
+    try {
+      if (editingBanner) {
         await axios.put(`${API_BASE}/api/banners/${editingBanner._id}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         })
-        fetchBanners()
-        resetForm()
-        setTimeout(() => alert("Banner updated successfully"), 200)
-      } catch (err) {
-        alert(err.response?.data?.message || "Failed to update banner")
-      }
-    } else {
-      // For non-product banners, handle image upload and hash checking
-      if (type === "slider" || type === "offer") {
-        const hash = await computeFileHash(image)
-        const existing = banners.find((b) => b.hash === hash && b.type === type)
-        if (existing) {
-          alert("This image already exists in the selected type.")
-          return
-        }
-        formData.append("image", image)
-        formData.append("hash", hash)
-      }
-
-      try {
+        alert("Banner updated successfully")
+      } else {
         await axios.post(`${API_BASE}/api/banners/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         })
         alert("Banner uploaded successfully")
-        fetchBanners()
-        resetForm()
-      } catch (err) {
-        alert(err.response?.data?.message || "Upload failed")
       }
+
+      fetchBanners()
+      resetForm()
+    } catch (err) {
+      console.error("Upload error:", err)
+      alert(err.response?.data?.message || "Upload failed")
     }
   }
 
@@ -217,16 +190,28 @@ const AdminBannerUpload = () => {
   }
 
   const handleDelete = async (id) => {
-    try {
-      await axios.delete(`${API_BASE}/api/banners/${id}`)
-      fetchBanners()
-    } catch (err) {
-      alert("Failed to delete")
+    if (confirm("Are you sure you want to delete this banner?")) {
+      try {
+        await axios.delete(`${API_BASE}/api/banners/${id}`)
+        fetchBanners()
+        alert("Banner deleted successfully")
+      } catch (err) {
+        alert("Failed to delete banner")
+      }
     }
   }
 
   const selectedProduct = getSelectedProduct()
   const selectedVariant = getSelectedVariant()
+
+  // Get uploaded products for display
+  const getUploadedProducts = () => {
+    const productBanners = banners.filter((b) => b.type === "product-type" || b.type === "side")
+    const uploadedProductIds = [...new Set(productBanners.map((b) => b.productId))]
+    return products.filter((p) => uploadedProductIds.includes(p._id))
+  }
+
+  const uploadedProducts = getUploadedProducts()
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -265,7 +250,7 @@ const AdminBannerUpload = () => {
                 value={selectedProductId}
                 onChange={(e) => {
                   setSelectedProductId(e.target.value)
-                  setSelectedVariantIndex(0) // Reset variant selection
+                  setSelectedVariantIndex(0)
                 }}
                 className="mb-2 p-2 border w-full"
                 size="5"
@@ -354,25 +339,37 @@ const AdminBannerUpload = () => {
         </div>
       )}
 
-      <input
-        type="text"
-        placeholder="Search by Product name"
-        className="p-2 border w-full mb-4"
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+      {/* Show Uploaded Products instead of search */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-3">Products Added to Banners ({uploadedProducts.length})</h3>
+        {uploadedProducts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {uploadedProducts.map((product) => (
+              <div key={product._id} className="border rounded p-2 text-center">
+                {product.images?.others?.[0] && (
+                  <img
+                    src={`${API_BASE}${product.images.others[0]}`}
+                    alt={product.title}
+                    className="w-full h-20 object-cover rounded mb-1"
+                  />
+                )}
+                <p className="text-xs font-medium truncate">{product.title}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No products added to banners yet.</p>
+        )}
+      </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         {banners
-          .filter((b) => {
-            const matchesType = type === "all" || b.type === type
-            const matchesSearch = b.title?.toLowerCase().includes(searchTerm.toLowerCase())
-            return matchesType && matchesSearch
-          })
+          .filter((b) => type === "all" || b.type === type)
           .map((banner) => (
             <div key={banner._id} className="border p-3 rounded shadow relative">
               <div className="relative">
                 <img
-                  src={`${API_BASE}${banner.imageUrl || banner.productImageUrl}`}
+                  src={`${API_BASE}${banner.imageUrl}`}
                   alt={banner.title || banner.type}
                   className="w-full h-40 object-cover rounded mb-2"
                 />
