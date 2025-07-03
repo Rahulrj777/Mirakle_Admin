@@ -1,3 +1,4 @@
+// AdminBannerUpload.jsx
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import SparkMD5 from 'spark-md5';
@@ -17,7 +18,7 @@ const AdminBannerUpload = () => {
 
   useEffect(() => {
     fetchBanners();
-  }, [type]); // fetch on type change
+  }, []);
 
   const fetchBanners = async () => {
     try {
@@ -25,7 +26,6 @@ const AdminBannerUpload = () => {
       setBanners(res.data);
     } catch (err) {
       console.error("Failed to fetch banners", err);
-      toast.error("Failed to fetch banners");
     }
   };
 
@@ -128,18 +128,12 @@ const AdminBannerUpload = () => {
             onClick={() => setShowProductModal(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded mb-4"
           >
-            {selectedProducts.length > 0
-              ? `Change Products (${selectedProducts.length})`
-              : 'Select Products'}
+            {selectedProducts.length > 0 ? `Change Products (${selectedProducts.length})` : 'Select Products'}
           </button>
-
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {selectedProducts.map((prod) => (
               <div key={prod._id} className="border p-2 rounded">
-                <img
-                  src={`${API_BASE}${prod.images.others[0]}`}
-                  className="w-full h-28 object-cover rounded"
-                />
+                <img src={`${API_BASE}${prod.images.others[0]}`} className="w-full h-28 object-cover rounded" />
                 <p className="text-sm mt-1">{prod.title}</p>
               </div>
             ))}
@@ -147,19 +141,10 @@ const AdminBannerUpload = () => {
         </>
       ) : (
         <>
-          <input
-            id="banner-file"
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="mb-4"
-          />
+          <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
           {image && (
             <div className="aspect-[3/2] w-full mb-4">
-              <img
-                src={URL.createObjectURL(image)}
-                className="w-full h-full object-cover rounded"
-              />
+              <img src={URL.createObjectURL(image)} className="w-full h-full object-cover rounded" />
             </div>
           )}
         </>
@@ -177,6 +162,7 @@ const AdminBannerUpload = () => {
         </button>
       </div>
 
+      {/* PRODUCT SELECT MODAL */}
       {showProductModal && (
         <ProductPickerModal
           onClose={() => setShowProductModal(false)}
@@ -186,30 +172,17 @@ const AdminBannerUpload = () => {
         />
       )}
 
-      {/* Uploaded Banner Section */}
       <h2 className="text-xl font-semibold mt-10 mb-4">Uploaded Banners</h2>
       <div className="grid md:grid-cols-3 gap-4">
-        {banners.map((banner) => (
+        {banners.map(banner => (
           <div key={banner._id} className="border p-2 rounded shadow relative">
             {banner.imageUrl && (
-              <img
-                src={`${API_BASE}${banner.imageUrl}`}
-                className="w-full h-32 object-cover rounded mb-2"
-              />
+              <img src={`${API_BASE}${banner.imageUrl}`} className="w-full h-32 object-cover rounded" />
             )}
-
-            {banner.productIds && banner.productIds.length > 0 && (
-              <ul className="text-sm text-gray-700 space-y-1">
-                {banner.products?.map((p) => (
-                  <li key={p._id} className="text-xs">• {p.title}</li>
-                ))}
-              </ul>
+            {banner.productIds?.length > 0 && (
+              <div className="text-sm text-gray-700 mt-2">Linked Products: {banner.productIds.length}</div>
             )}
-
-            <button
-              onClick={() => handleDelete(banner._id)}
-              className="absolute top-1 right-1 text-white bg-red-500 px-2 py-1 rounded text-xs"
-            >
+            <button onClick={() => handleDelete(banner._id)} className="absolute top-1 right-1 text-white bg-red-500 px-2 py-1 rounded text-xs">
               Delete
             </button>
           </div>
