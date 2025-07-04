@@ -114,10 +114,9 @@ const AdminBannerUpload = () => {
         const oldPrice = variant.price / (1 - variant.discountPercent / 100)
         formData.append("oldPrice", oldPrice.toFixed(2))
       }
-      formData.append("keywords", JSON.stringify(
-        keywords.split(',').map(k => k.trim().toLowerCase()).filter(Boolean)
-      ));
-
+      if (product.keywords?.length > 0) {
+        formData.append("keywords", JSON.stringify(product.keywords))
+      }
       const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
       if (sizeMatch) {
         formData.append("weightValue", sizeMatch[1])
