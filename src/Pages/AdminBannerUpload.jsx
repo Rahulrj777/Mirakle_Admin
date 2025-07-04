@@ -1,187 +1,207 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import SparkMD5 from "spark-md5";
-import { API_BASE } from "../utils/api";
+"use client"
+
+import { useState, useEffect } from "react"
+import axios from "axios"
+import SparkMD5 from "spark-md5"
+import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
-  const [image, setImage] = useState(null);
-  const [type, setType] = useState("slider");
-  const [banners, setBanners] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
-  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [image, setImage] = useState(null)
+  const [type, setType] = useState("slider")
+  const [banners, setBanners] = useState([])
+  const [products, setProducts] = useState([])
+  const [selectedProductId, setSelectedProductId] = useState("")
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
+  const [productSearchTerm, setProductSearchTerm] = useState("")
 
   const fetchBanners = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/banners`);
-      setBanners(res.data);
+      const res = await axios.get(`${API_BASE}/api/banners`)
+      setBanners(res.data)
     } catch (err) {
-      console.error("Failed to fetch banners:", err);
+      console.error("Failed to fetch banners:", err)
     }
-  };
+  }
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/products/all-products`);
-      setProducts(res.data);
+      const res = await axios.get(`${API_BASE}/api/products/all-products`)
+      setProducts(res.data)
     } catch (err) {
-      console.error("Failed to fetch products:", err);
+      console.error("Failed to fetch products:", err)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchBanners();
-    fetchProducts();
-  }, []);
+    fetchBanners()
+    fetchProducts()
+  }, [])
 
   const computeFileHash = (file) =>
     new Promise((resolve, reject) => {
-      const chunkSize = 2097152;
-      const spark = new SparkMD5.ArrayBuffer();
-      const fileReader = new FileReader();
-      let cursor = 0;
+      const chunkSize = 2097152
+      const spark = new SparkMD5.ArrayBuffer()
+      const fileReader = new FileReader()
+      let cursor = 0
 
       fileReader.onload = (e) => {
-        spark.append(e.target.result);
-        cursor += chunkSize;
+        spark.append(e.target.result)
+        cursor += chunkSize
         if (cursor < file.size) {
-          readNext();
+          readNext()
         } else {
-          resolve(spark.end());
+          resolve(spark.end())
         }
-      };
-
-      fileReader.onerror = () => reject("File reading error");
-
-      function readNext() {
-        const slice = file.slice(cursor, cursor + chunkSize);
-        fileReader.readAsArrayBuffer(slice);
       }
 
-      readNext();
-    });
+      fileReader.onerror = () => reject("File reading error")
+
+      function readNext() {
+        const slice = file.slice(cursor, cursor + chunkSize)
+        fileReader.readAsArrayBuffer(slice)
+      }
+
+      readNext()
+    })
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files[0]
     if (!file || !file.type.startsWith("image/")) {
-      alert("Only image files are allowed");
-      return;
+      alert("Only image files are allowed")
+      return
     }
-    setImage(file);
-  };
+    setImage(file)
+  }
 
-  const getSelectedProduct = () => products.find((p) => p._id === selectedProductId);
-  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex];
+  const getSelectedProduct = () => products.find((p) => p._id === selectedProductId)
+  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex]
 
   const filteredProducts = products.filter((product) =>
-    product.title.toLowerCase().includes(productSearchTerm.toLowerCase())
-  );
+    product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
+  )
 
   const handleUpload = async () => {
     if (type === "all") {
-      alert("Cannot upload when 'Show All' is selected");
-      return;
+      alert("Cannot upload when 'Show All' is selected")
+      return
     }
 
-    const formData = new FormData();
-    formData.append("type", type);
+    const formData = new FormData()
+    formData.append("type", type)
 
     if (type === "product-type" || type === "side") {
       if (!selectedProductId) {
-        alert("Please select a product");
-        return;
+        alert("Please select a product")
+        return
       }
 
-      const product = getSelectedProduct();
-      const variant = getSelectedVariant();
+      const product = getSelectedProduct()
+      const variant = getSelectedVariant()
 
       if (!product || !variant) {
-        alert("Invalid product or variant selection");
-        return;
+        alert("Invalid product or variant selection")
+        return
       }
 
-      formData.append("productId", selectedProductId);
-      formData.append("selectedVariantIndex", selectedVariantIndex.toString());
-      formData.append("productImageUrl", product.images?.others?.[0] || "");
-      formData.append("title", product.title);
-      formData.append("price", variant.price.toString());
-      formData.append("discountPercent", (variant.discountPercent || 0).toString());
+      formData.append("productId", selectedProductId)
+      formData.append("selectedVariantIndex", selectedVariantIndex.toString())
+      formData.append("productImageUrl", product.images?.others?.[0] || "")
+      formData.append("title", product.title)
+      formData.append("price", variant.price.toString())
+      formData.append("discountPercent", (variant.discountPercent || 0).toString())
 
       if (variant.discountPercent > 0) {
-        const oldPrice = variant.price / (1 - variant.discountPercent / 100);
-        formData.append("oldPrice", oldPrice.toFixed(2));
+        const oldPrice = variant.price / (1 - variant.discountPercent / 100)
+        formData.append("oldPrice", oldPrice.toFixed(2))
       }
 
-      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/);
+      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
       if (sizeMatch) {
-        formData.append("weightValue", sizeMatch[1]);
-        formData.append("weightUnit", sizeMatch[2]);
+        formData.append("weightValue", sizeMatch[1])
+        formData.append("weightUnit", sizeMatch[2])
       }
     } else {
       if (!image) {
-        alert("Please select an image");
-        return;
+        alert("Please select an image")
+        return
       }
 
-      const hash = await computeFileHash(image);
-      formData.append("image", image);
-      formData.append("hash", hash);
+      const hash = await computeFileHash(image)
+      formData.append("image", image)
+      formData.append("hash", hash)
     }
 
     try {
       await axios.post(`${API_BASE}/api/banners/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      });
-      alert("Banner uploaded successfully");
-      fetchBanners();
-      setImage(null);
-      setSelectedProductId("");
-      setSelectedVariantIndex(0);
-      const inputEl = document.getElementById("banner-file");
-      if (inputEl) inputEl.value = "";
+      })
+      alert("Banner uploaded successfully")
+      fetchBanners()
+      setImage(null)
+      setSelectedProductId("")
+      setSelectedVariantIndex(0)
+      const inputEl = document.getElementById("banner-file")
+      if (inputEl) inputEl.value = ""
     } catch (err) {
-      console.error("Upload error:", err);
-      alert(err.response?.data?.message || "Upload failed");
+      console.error("Upload error:", err)
+      alert(err.response?.data?.message || "Upload failed")
     }
-  };
+  }
 
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this banner?")) {
       try {
-        await axios.delete(`${API_BASE}/api/banners/${id}`);
-        fetchBanners();
-        alert("Banner deleted successfully");
+        await axios.delete(`${API_BASE}/api/banners/${id}`)
+        fetchBanners()
+        alert("Banner deleted successfully")
       } catch (err) {
-        alert("Failed to delete banner");
+        alert("Failed to delete banner")
       }
     }
-  };
+  }
 
+  // 🚨 UPDATED: Delete by specific type or all
   const handleDeleteAll = async () => {
-    if (confirm("Are you sure you want to delete ALL banners?")) {
+    const currentType = type === "all" ? "all" : type
+    const typeNames = {
+      all: "ALL",
+      slider: "Banner",
+      side: "Top Selling Product's",
+      offer: "Offer Zone",
+      "product-type": "Our Special Product's",
+    }
+
+    const typeName = typeNames[currentType] || currentType
+    const confirmMessage =
+      currentType === "all"
+        ? "Are you sure you want to delete ALL banners of ALL types?"
+        : `Are you sure you want to delete all ${typeName} banners?`
+
+    if (confirm(confirmMessage)) {
       try {
-        await axios.delete(`${API_BASE}/api/banners`);
-        fetchBanners();
-        alert("All banners deleted successfully");
+        const url = currentType === "all" ? `${API_BASE}/api/banners` : `${API_BASE}/api/banners?type=${currentType}`
+
+        const response = await axios.delete(url)
+        fetchBanners()
+        alert(response.data.message || "Banners deleted successfully")
       } catch (err) {
-        alert("Failed to delete all banners");
+        console.error("Delete all error:", err)
+        alert("Failed to delete banners")
       }
     }
-  };
+  }
 
-  const selectedProduct = getSelectedProduct();
-  const selectedVariant = getSelectedVariant();
+  const selectedProduct = getSelectedProduct()
+  const selectedVariant = getSelectedVariant()
+
+  // Get filtered banners for current view
+  const filteredBanners = banners.filter((b) => type === "all" || b.type === type)
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">Admin Banner Upload Panel</h2>
 
-      <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        className="border p-2 w-full mb-4"
-      >
+      <select value={type} onChange={(e) => setType(e.target.value)} className="border p-2 w-full mb-4">
         <option value="all">Show All (View Only)</option>
         <option value="slider">Banner</option>
         <option value="side">Top Selling Product's</option>
@@ -194,7 +214,6 @@ const AdminBannerUpload = () => {
           {(type === "product-type" || type === "side") && (
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Product:</label>
-
               <input
                 type="text"
                 placeholder="Search products..."
@@ -202,12 +221,11 @@ const AdminBannerUpload = () => {
                 onChange={(e) => setProductSearchTerm(e.target.value)}
                 className="mb-2 p-2 border w-full rounded"
               />
-
               <select
                 value={selectedProductId}
                 onChange={(e) => {
-                  setSelectedProductId(e.target.value);
-                  setSelectedVariantIndex(0);
+                  setSelectedProductId(e.target.value)
+                  setSelectedVariantIndex(0)
                 }}
                 className="mb-2 p-2 border w-full"
                 size="5"
@@ -268,7 +286,7 @@ const AdminBannerUpload = () => {
               <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
               {image && (
                 <img
-                  src={URL.createObjectURL(image)}
+                  src={URL.createObjectURL(image) || "/placeholder.svg"}
                   alt="Preview"
                   className="mb-4 w-full h-64 object-cover rounded border"
                 />
@@ -283,65 +301,71 @@ const AdminBannerUpload = () => {
       )}
 
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Uploaded Banners</h3>
-        {banners.length > 0 && (
+        <h3 className="text-lg font-semibold">
+          {type === "all"
+            ? "All Uploaded Banners"
+            : `${type === "slider" ? "Banner" : type === "side" ? "Top Selling Product's" : type === "offer" ? "Offer Zone" : "Our Special Product's"} (${filteredBanners.length})`}
+        </h3>
+        {filteredBanners.length > 0 && (
           <button
             onClick={handleDeleteAll}
-            className="bg-red-600 text-white px-4 py-2 rounded text-sm"
+            className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
           >
-            Delete All
+            {type === "all"
+              ? "Delete All Banners"
+              : `Delete All ${type === "slider" ? "Banner" : type === "side" ? "Top Selling" : type === "offer" ? "Offer" : "Special Product"} Banners`}
           </button>
         )}
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        {banners
-          .filter((b) => type === "all" || b.type === type)
-          .map((banner) => (
-            <div key={banner._id} className="border p-3 rounded shadow relative">
-              <img
-                src={`${API_BASE}${banner.imageUrl}`}
-                alt={banner.title || banner.type}
-                className="w-full h-40 object-cover rounded mb-2"
-              />
-              {banner.discountPercent > 0 && (
-                <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                  {banner.discountPercent}% OFF
-                </span>
-              )}
-              {banner.title && (
-                <div className="text-sm text-center font-medium mt-1">{banner.title}</div>
-              )}
-              {banner.price > 0 && (
-                <div className="text-center text-sm mt-1">
-                  <span className="text-green-700 font-semibold">
-                    ₹ {Number(banner.price).toFixed(0)}
+        {filteredBanners.map((banner) => (
+          <div key={banner._id} className="border p-3 rounded shadow relative">
+            <img
+              src={`${API_BASE}${banner.imageUrl}`}
+              alt={banner.title || banner.type}
+              className="w-full h-40 object-cover rounded mb-2"
+            />
+            {banner.discountPercent > 0 && (
+              <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                {banner.discountPercent}% OFF
+              </span>
+            )}
+            {banner.title && <div className="text-sm text-center font-medium mt-1">{banner.title}</div>}
+            {banner.price > 0 && (
+              <div className="text-center text-sm mt-1">
+                <span className="text-green-700 font-semibold">₹ {Number(banner.price).toFixed(0)}</span>
+                {banner.oldPrice > 0 && (
+                  <span className="text-gray-400 line-through ml-2 text-xs">
+                    ₹ {Number(banner.oldPrice).toFixed(0)}
                   </span>
-                  {banner.oldPrice > 0 && (
-                    <span className="text-gray-400 line-through ml-2 text-xs">
-                      ₹ {Number(banner.oldPrice).toFixed(0)}
-                    </span>
-                  )}
-                </div>
-              )}
-              {banner.weight?.value > 0 && (
-                <div className="text-gray-500 text-center text-xs">
-                  {banner.weight.value} {banner.weight.unit}
-                </div>
-              )}
-              <div className="mt-3 text-center">
-                <button
-                  onClick={() => handleDelete(banner._id)}
-                  className="bg-red-500 text-white px-3 py-1 text-sm rounded"
-                >
-                  Delete
-                </button>
+                )}
               </div>
+            )}
+            {banner.weight?.value > 0 && (
+              <div className="text-gray-500 text-center text-xs">
+                {banner.weight.value} {banner.weight.unit}
+              </div>
+            )}
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => handleDelete(banner._id)}
+                className="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600"
+              >
+                Delete
+              </button>
             </div>
-          ))}
+          </div>
+        ))}
       </div>
-    </div>
-  );
-};
 
-export default AdminBannerUpload;
+      {filteredBanners.length === 0 && (
+        <div className="text-center text-gray-500 py-8">
+          <p>No banners found for the selected type.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default AdminBannerUpload
