@@ -138,7 +138,8 @@ const AdminBannerUpload = () => {
       setImage(null);
       setSelectedProductId("");
       setSelectedVariantIndex(0);
-      document.getElementById("banner-file").value = "";
+      const inputEl = document.getElementById("banner-file");
+      if (inputEl) inputEl.value = "";
     } catch (err) {
       console.error("Upload error:", err);
       alert(err.response?.data?.message || "Upload failed");
