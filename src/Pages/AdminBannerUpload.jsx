@@ -107,7 +107,8 @@ const AdminBannerUpload = () => {
       formData.append("selectedVariantIndex", selectedVariantIndex.toString())
       formData.append("productImageUrl", product.images?.others?.[0] || "")
       formData.append("title", product.title)
-      formData.append("price", variant.price.toString())
+      const finalPrice = variant.price - (variant.price * (variant.discountPercent || 0)) / 100
+      formData.append("price", finalPrice.toFixed(2)) 
       formData.append("discountPercent", (variant.discountPercent || 0).toString())
 
       if (variant.discountPercent > 0) {
