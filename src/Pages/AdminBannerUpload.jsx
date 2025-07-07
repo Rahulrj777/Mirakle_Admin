@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import SparkMD5 from "spark-md5"
@@ -13,6 +11,23 @@ const AdminBannerUpload = () => {
   const [selectedProductId, setSelectedProductId] = useState("")
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
+  const [oldPrice, setOldPrice] = useState("");
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [price, setPrice] = useState("");
+
+  const handlePriceCalculation = () => {
+    const old = parseFloat(oldPrice);
+    const discount = parseFloat(discountPercent);
+
+    if (!isNaN(old) && !isNaN(discount)) {
+      const calculated = old - (old * discount) / 100;
+      setPrice(calculated.toFixed(2));
+    }
+  };
+
+  useEffect(() => {
+    handlePriceCalculation();
+  }, [oldPrice, discountPercent]);
 
   const fetchBanners = async () => {
     try {
@@ -107,8 +122,7 @@ const AdminBannerUpload = () => {
       formData.append("selectedVariantIndex", selectedVariantIndex.toString())
       formData.append("productImageUrl", product.images?.others?.[0] || "")
       formData.append("title", product.title)
-      const finalPrice = variant.price - (variant.price * (variant.discountPercent || 0)) / 100
-      formData.append("price", finalPrice.toFixed(2)) 
+      formData.append("price", price.toString());
       formData.append("discountPercent", (variant.discountPercent || 0).toString())
 
       if (variant.discountPercent > 0) {
