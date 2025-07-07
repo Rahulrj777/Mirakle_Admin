@@ -1,211 +1,201 @@
-import { useState, useEffect } from "react"
-import axios from "axios"
-import SparkMD5 from "spark-md5"
-import { API_BASE } from "../utils/api"
+import { useState, useEffect } from "react";
+import axios from "axios";
+import SparkMD5 from "spark-md5";
+import { API_BASE } from "../utils/api";
 
 const AdminBannerUpload = () => {
-  const [image, setImage] = useState(null)
-  const [type, setType] = useState("slider")
-  const [banners, setBanners] = useState([])
-  const [products, setProducts] = useState([])
-  const [selectedProductId, setSelectedProductId] = useState("")
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
-  const [productSearchTerm, setProductSearchTerm] = useState("")
-  const [oldPrice, setOldPrice] = useState("");
+  const [image, setImage] = useState(null);
+  const [type, setType] = useState("slider");
+  const [banners, setBanners] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+
+  // Load banners and products
+  useEffect(() => {
+    fetchBanners();
+    fetchProducts();
+  }, []);
 
   const fetchBanners = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/banners`)
-      setBanners(res.data)
+      const res = await axios.get(`${API_BASE}/api/banners`);
+      setBanners(res.data);
     } catch (err) {
-      console.error("Failed to fetch banners:", err)
+      console.error("Failed to fetch banners:", err);
     }
-  }
+  };
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/products/all-products`)
-      setProducts(res.data)
+      const res = await axios.get(`${API_BASE}/api/products/all-products`);
+      setProducts(res.data);
     } catch (err) {
-      console.error("Failed to fetch products:", err)
+      console.error("Failed to fetch products:", err);
     }
-  }
-
-  useEffect(() => {
-    fetchBanners()
-    fetchProducts()
-  }, [])
+  };
 
   const computeFileHash = (file) =>
     new Promise((resolve, reject) => {
-      const chunkSize = 2097152
-      const spark = new SparkMD5.ArrayBuffer()
-      const fileReader = new FileReader()
-      let cursor = 0
+      const chunkSize = 2097152;
+      const spark = new SparkMD5.ArrayBuffer();
+      const fileReader = new FileReader();
+      let cursor = 0;
 
       fileReader.onload = (e) => {
-        spark.append(e.target.result)
-        cursor += chunkSize
+        spark.append(e.target.result);
+        cursor += chunkSize;
         if (cursor < file.size) {
-          readNext()
+          readNext();
         } else {
-          resolve(spark.end())
+          resolve(spark.end());
         }
-      }
+      };
 
-      fileReader.onerror = () => reject("File reading error")
+      fileReader.onerror = () => reject("File reading error");
 
       function readNext() {
-        const slice = file.slice(cursor, cursor + chunkSize)
-        fileReader.readAsArrayBuffer(slice)
+        const slice = file.slice(cursor, cursor + chunkSize);
+        fileReader.readAsArrayBuffer(slice);
       }
 
-      readNext()
-    })
+      readNext();
+    });
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (!file || !file.type.startsWith("image/")) {
-      alert("Only image files are allowed")
-      return
+      alert("Only image files are allowed");
+      return;
     }
-    setImage(file)
-  }
+    setImage(file);
+  };
 
-  const getSelectedProduct = () => products.find((p) => p._id === selectedProductId)
-  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex]
+  const getSelectedProduct = () => products.find((p) => p._id === selectedProductId);
+  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex];
 
   const filteredProducts = products.filter((product) =>
-    product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
-  )
+    product.title.toLowerCase().includes(productSearchTerm.toLowerCase())
+  );
 
   const handleUpload = async () => {
     if (type === "all") {
-      alert("Cannot upload when 'Show All' is selected")
-      return
+      alert("Cannot upload when 'Show All' is selected");
+      return;
     }
 
-    const formData = new FormData()
-    formData.append("type", type)
+    const formData = new FormData();
+    formData.append("type", type);
 
     if (type === "product-type" || type === "side") {
       if (!selectedProductId) {
-        alert("Please select a product")
-        return
+        alert("Please select a product");
+        return;
       }
 
-      const product = getSelectedProduct()
-      const variant = getSelectedVariant()
+      const product = getSelectedProduct();
+      const variant = getSelectedVariant();
 
       if (!product || !variant) {
-        alert("Invalid product or variant selection")
-        return
+        alert("Invalid product or variant selection");
+        return;
       }
-      
+
       const discount = parseFloat(variant.discountPercent) || 0;
-      const finalPrice = parseFloat(variant.price) || 0;
-      let oldPrice = finalPrice;  
+      const price = parseFloat(variant.price) || 0;
+      const oldPrice = discount > 0 ? price / (1 - discount / 100) : price;
 
-      if (discount > 0) {
-        oldPrice = finalPrice / (1 - discount / 100);
-      }
-
-      formData.append("productId", selectedProductId)
-      formData.append("selectedVariantIndex", selectedVariantIndex.toString())
-      formData.append("productImageUrl", product.images?.others?.[0] || "")
-      formData.append("title", product.title)
-      formData.append("price", finalPrice.toFixed(2));
+      formData.append("productId", selectedProductId);
+      formData.append("selectedVariantIndex", selectedVariantIndex.toString());
+      formData.append("productImageUrl", product.images?.others?.[0] || "");
+      formData.append("title", product.title);
+      formData.append("price", price.toFixed(2));
       formData.append("oldPrice", oldPrice.toFixed(2));
       formData.append("discountPercent", discount.toString());
 
-      if (variant.discountPercent > 0) {
-        const old = parseFloat(oldPrice) || 0;
-        formData.append("oldPrice", old.toFixed(2));
-      }
       if (product.keywords?.length > 0) {
-        formData.append("keywords", JSON.stringify(product.keywords))
+        formData.append("keywords", JSON.stringify(product.keywords));
       }
-      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+
+      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/);
       if (sizeMatch) {
-        formData.append("weightValue", sizeMatch[1])
-        formData.append("weightUnit", sizeMatch[2])
+        formData.append("weightValue", sizeMatch[1]);
+        formData.append("weightUnit", sizeMatch[2]);
       }
     } else {
       if (!image) {
-        alert("Please select an image")
-        return
+        alert("Please select an image");
+        return;
       }
 
-      const hash = await computeFileHash(image)
-      formData.append("image", image)
-      formData.append("hash", hash)
+      const hash = await computeFileHash(image);
+      formData.append("image", image);
+      formData.append("hash", hash);
     }
 
     try {
       await axios.post(`${API_BASE}/api/banners/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-      })
-      alert("Banner uploaded successfully")
-      fetchBanners()
-      setImage(null)
-      setSelectedProductId("")
-      setSelectedVariantIndex(0)
-      const inputEl = document.getElementById("banner-file")
-      if (inputEl) inputEl.value = ""
+      });
+      alert("Banner uploaded successfully");
+      fetchBanners();
+      setImage(null);
+      setSelectedProductId("");
+      setSelectedVariantIndex(0);
+      document.getElementById("banner-file")?.value = "";
     } catch (err) {
-      console.error("Upload error:", err)
-      alert(err.response?.data?.message || "Upload failed")
+      console.error("Upload error:", err);
+      alert(err.response?.data?.message || "Upload failed");
     }
-  }
+  };
 
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this banner?")) {
       try {
-        await axios.delete(`${API_BASE}/api/banners/${id}`)
-        fetchBanners()
-        alert("Banner deleted successfully")
+        await axios.delete(`${API_BASE}/api/banners/${id}`);
+        fetchBanners();
+        alert("Banner deleted successfully");
       } catch (err) {
-        alert("Failed to delete banner")
+        alert("Failed to delete banner");
       }
     }
-  }
+  };
 
-  // 🚨 UPDATED: Delete by specific type or all
   const handleDeleteAll = async () => {
-    const currentType = type === "all" ? "all" : type
+    const currentType = type === "all" ? "all" : type;
     const typeNames = {
       all: "ALL",
       slider: "Banner",
       side: "Top Selling Product's",
       offer: "Offer Zone",
       "product-type": "Our Special Product's",
-    }
+    };
 
-    const typeName = typeNames[currentType] || currentType
     const confirmMessage =
       currentType === "all"
-        ? "Are you sure you want to delete ALL banners of ALL types?"
-        : `Are you sure you want to delete all ${typeName} banners?`
+        ? "Are you sure you want to delete ALL banners?"
+        : `Delete all ${typeNames[currentType]} banners?`;
 
     if (confirm(confirmMessage)) {
       try {
-        const url = currentType === "all" ? `${API_BASE}/api/banners` : `${API_BASE}/api/banners?type=${currentType}`
+        const url =
+          currentType === "all"
+            ? `${API_BASE}/api/banners`
+            : `${API_BASE}/api/banners?type=${currentType}`;
 
-        const response = await axios.delete(url)
-        fetchBanners()
-        alert(response.data.message || "Banners deleted successfully")
+        const response = await axios.delete(url);
+        fetchBanners();
+        alert(response.data.message || "Banners deleted successfully");
       } catch (err) {
-        console.error("Delete all error:", err)
-        alert("Failed to delete banners")
+        alert("Failed to delete banners");
       }
     }
-  }
+  };
 
-  const selectedProduct = getSelectedProduct()
-  const selectedVariant = getSelectedVariant()
-
-  // Get filtered banners for current view
-  const filteredBanners = banners.filter((b) => type === "all" || b.type === type)
+  const selectedProduct = getSelectedProduct();
+  const selectedVariant = getSelectedVariant();
+  const filteredBanners = banners.filter((b) => type === "all" || b.type === type);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -234,8 +224,8 @@ const AdminBannerUpload = () => {
               <select
                 value={selectedProductId}
                 onChange={(e) => {
-                  setSelectedProductId(e.target.value)
-                  setSelectedVariantIndex(0)
+                  setSelectedProductId(e.target.value);
+                  setSelectedVariantIndex(0);
                 }}
                 className="mb-2 p-2 border w-full"
                 size="5"
@@ -296,7 +286,7 @@ const AdminBannerUpload = () => {
               <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
               {image && (
                 <img
-                  src={URL.createObjectURL(image) || "/placeholder.svg"}
+                  src={URL.createObjectURL(image)}
                   alt="Preview"
                   className="mb-4 w-full h-64 object-cover rounded border"
                 />
@@ -375,7 +365,7 @@ const AdminBannerUpload = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default AdminBannerUpload
+export default AdminBannerUpload;
