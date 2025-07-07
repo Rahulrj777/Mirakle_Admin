@@ -268,9 +268,9 @@ const AdminProductUpload = () => {
             onChange={(e) => handleVariantChange(i, "sizeUnit", e.target.value)}
             className="p-2 border"
           >
+            <option value="g">g</option>
             <option value="ml">ml</option>
             <option value="li">li</option>
-            <option value="g">g</option>
           </select>
           <input
             type="number"
