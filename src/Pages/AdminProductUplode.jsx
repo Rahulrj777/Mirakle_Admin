@@ -5,7 +5,7 @@ import { API_BASE } from "../utils/api"
 const AdminProductUpload = () => {
   const [name, setName] = useState("")
   const [variants, setVariants] = useState([
-    { sizeValue: "", sizeUnit: "g", price: "", discountPercent: "", finalPrice: "", stock: "" },
+    { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
   const [images, setImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
@@ -33,7 +33,7 @@ const AdminProductUpload = () => {
 
   const resetForm = () => {
     setName("")
-    setVariants([{ sizeValue: "", sizeUnit: "g", price: "", discountPercent: "", finalPrice: "", stock: "" }])
+    setVariants([{ sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" }])
     setImages([])
     setExistingImages([])
     setRemovedImages([])
@@ -81,7 +81,7 @@ const AdminProductUpload = () => {
       ...variants,
       {
         sizeValue: "",
-        sizeUnit: "g",
+        sizeUnit: "ml",
         price: "",
         discountPercent: "",
         finalPrice: "",
@@ -268,9 +268,9 @@ const AdminProductUpload = () => {
             onChange={(e) => handleVariantChange(i, "sizeUnit", e.target.value)}
             className="p-2 border"
           >
-            <option value="g">g</option>
             <option value="ml">ml</option>
             <option value="li">li</option>
+            <option value="g">g</option>
           </select>
           <input
             type="number"
