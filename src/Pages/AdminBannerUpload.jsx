@@ -12,22 +12,6 @@ const AdminBannerUpload = () => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
   const [oldPrice, setOldPrice] = useState("");
-  const [discountPercent, setDiscountPercent] = useState("");
-  const [price, setPrice] = useState("");
-
-  const handlePriceCalculation = () => {
-    const old = parseFloat(oldPrice);
-    const discount = parseFloat(discountPercent);
-
-    if (!isNaN(old) && !isNaN(discount)) {
-      const calculated = old - (old * discount) / 100;
-      setPrice(calculated.toFixed(2));
-    }
-  };
-
-  useEffect(() => {
-    handlePriceCalculation();
-  }, [oldPrice, discountPercent]);
 
   const fetchBanners = async () => {
     try {
@@ -117,13 +101,22 @@ const AdminBannerUpload = () => {
         alert("Invalid product or variant selection")
         return
       }
+      
+      const discount = parseFloat(variant.discountPercent) || 0;
+      const finalPrice = parseFloat(variant.price) || 0;
+      let oldPrice = finalPrice;  
+
+      if (discount > 0) {
+        oldPrice = finalPrice / (1 - discount / 100);
+      }
 
       formData.append("productId", selectedProductId)
       formData.append("selectedVariantIndex", selectedVariantIndex.toString())
       formData.append("productImageUrl", product.images?.others?.[0] || "")
       formData.append("title", product.title)
-      formData.append("price", price.toString());
-      formData.append("discountPercent", (variant.discountPercent || 0).toString())
+      formData.append("price", finalPrice.toFixed(2));
+      formData.append("oldPrice", oldPrice.toFixed(2));
+      formData.append("discountPercent", discount.toString());
 
       if (variant.discountPercent > 0) {
         const old = parseFloat(oldPrice) || 0;
