@@ -126,8 +126,8 @@ const AdminBannerUpload = () => {
       formData.append("discountPercent", (variant.discountPercent || 0).toString())
 
       if (variant.discountPercent > 0) {
-        const oldPrice = variant.price / (1 - variant.discountPercent / 100)
-        formData.append("oldPrice", oldPrice.toFixed(2))
+        const old = parseFloat(oldPrice) || 0;
+        formData.append("oldPrice", old.toFixed(2));
       }
       if (product.keywords?.length > 0) {
         formData.append("keywords", JSON.stringify(product.keywords))
