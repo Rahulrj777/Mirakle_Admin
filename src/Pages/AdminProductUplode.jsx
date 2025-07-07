@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -7,7 +5,7 @@ import { API_BASE } from "../utils/api"
 const AdminProductUpload = () => {
   const [name, setName] = useState("")
   const [variants, setVariants] = useState([
-    { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
+    { sizeValue: "", sizeUnit: "g", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
   const [images, setImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
@@ -17,8 +15,6 @@ const AdminProductUpload = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [detailsList, setDetailsList] = useState([{ key: "", value: "" }])
   const [description, setDescription] = useState("")
-
-  // 🚨 NEW: Keywords functionality
   const [keywords, setKeywords] = useState("")
   const [keywordsList, setKeywordsList] = useState([])
 
@@ -37,15 +33,15 @@ const AdminProductUpload = () => {
 
   const resetForm = () => {
     setName("")
-    setVariants([{ sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" }])
+    setVariants([{ sizeValue: "", sizeUnit: "g", price: "", discountPercent: "", finalPrice: "", stock: "" }])
     setImages([])
     setExistingImages([])
     setRemovedImages([])
     setEditingProduct(null)
     setDetailsList([{ key: "", value: "" }])
     setDescription("")
-    setKeywords("") // Reset keywords
-    setKeywordsList([]) // Reset keywords list
+    setKeywords("")
+    setKeywordsList([])
     const fileInput = document.getElementById("product-images")
     if (fileInput) fileInput.value = ""
   }
@@ -85,7 +81,7 @@ const AdminProductUpload = () => {
       ...variants,
       {
         sizeValue: "",
-        sizeUnit: "ml",
+        sizeUnit: "g",
         price: "",
         discountPercent: "",
         finalPrice: "",
