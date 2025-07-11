@@ -12,7 +12,6 @@ const AdminBannerUpload = () => {
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [productSearchTerm, setProductSearchTerm] = useState("");
 
-  // Load banners and products
   useEffect(() => {
     fetchBanners();
     fetchProducts();
