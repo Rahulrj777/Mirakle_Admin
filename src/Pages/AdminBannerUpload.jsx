@@ -105,6 +105,7 @@ const AdminBannerUpload = () => {
       const price = parseFloat(variant.price) || 0;
       const oldPrice = discount > 0 ? price / (1 - discount / 100) : price;
 
+      formData.append("image", image);
       formData.append("productId", selectedProductId);
       formData.append("selectedVariantIndex", selectedVariantIndex.toString());
       formData.append("productImageUrl", product.images?.others?.[0] || "");
