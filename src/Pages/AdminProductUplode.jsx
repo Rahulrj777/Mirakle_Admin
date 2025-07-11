@@ -162,12 +162,12 @@ const AdminProductUpload = () => {
     formData.append("description", description)
     formData.append("details", JSON.stringify(detailsObject))
     formData.append("keywords", JSON.stringify(keywordsList)) 
-    selectedImages.forEach((file) => {
-      formData.append("images", file);
-    });
+    images.forEach((img) => formData.append("images", img))
 
-    await axios.put(`${API_BASE}/api/products/${id}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+    await axios.put(`${API_BASE}/api/products/update/${productId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
 
     if (editingProduct) {
@@ -397,7 +397,7 @@ const AdminProductUpload = () => {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {images.map((img, i) => (
             <div key={i} className="relative">
-              <img src={img} className="w-full h-24 object-cover rounded" />
+              <img src={URL.createObjectURL(img) || "/placeholder.svg"} className="w-full h-24 object-cover rounded" />
               <button
                 onClick={() => removeNewImage(i)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
@@ -413,7 +413,7 @@ const AdminProductUpload = () => {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
             <div key={i} className="relative">
-              <img src={img} className="w-full h-24 object-cover rounded" />
+              <img src={`${API_BASE}${img}`} className="w-full h-24 object-cover rounded" />
               <button
                 onClick={() => handleImageRemove(img)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
