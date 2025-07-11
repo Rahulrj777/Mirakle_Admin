@@ -112,7 +112,6 @@ const AdminProductUpload = () => {
     setDetailsList(copy)
   }
 
-  // 🚨 NEW: Handle keywords
   const handleKeywordsChange = (e) => {
     setKeywords(e.target.value)
   }
@@ -169,7 +168,6 @@ const AdminProductUpload = () => {
       formData.append("removedImages", JSON.stringify(removedImages))
     }
 
-    // 🔍 Log form data entries
     for (const pair of formData.entries()) {
       console.log(`📝 ${pair[0]}:`, pair[1])
     }
@@ -241,6 +239,8 @@ const AdminProductUpload = () => {
       alert("Stock update failed")
     }
   }
+
+  console.log("📸 product.images.others[0]:", product.images.others[0]);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -409,7 +409,7 @@ const AdminProductUpload = () => {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
             <div key={i} className="relative">
-              <img src={`${API_BASE}/${img}`} className="w-full h-24 object-cover rounded" />
+              <img src={`${API_BASE}/${product.images.others[0]}`} className="w-full h-24 object-cover rounded" />
               <button
                 onClick={() => handleImageRemove(img)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
