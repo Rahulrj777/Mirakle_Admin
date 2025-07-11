@@ -162,14 +162,19 @@ const AdminProductUpload = () => {
     formData.append("variants", JSON.stringify(preparedVariants))
     formData.append("description", description)
     formData.append("details", JSON.stringify(detailsObject))
-    formData.append("keywords", JSON.stringify(keywordsList)) // Add keywords
+    formData.append("keywords", JSON.stringify(keywordsList)) 
     images.forEach((img) => formData.append("images", img))
+
+    await axios.put(`${API_BASE}/api/products/update/${productId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     if (editingProduct) {
       formData.append("removedImages", JSON.stringify(removedImages))
     }
 
-    // 🔍 Log form data entries
     for (const pair of formData.entries()) {
       console.log(`📝 ${pair[0]}:`, pair[1])
     }
