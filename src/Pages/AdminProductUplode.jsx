@@ -241,6 +241,8 @@ const AdminProductUpload = () => {
   }
 
   console.log("📸 product.images.others[0]:", product.images.others[0]);
+  console.log("🖼️ Image URL:", `${API_BASE}/${product.images.others[0]}`);
+
 
   return (
     <div className="max-w-5xl mx-auto p-6">
