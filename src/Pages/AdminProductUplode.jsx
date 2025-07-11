@@ -413,7 +413,7 @@ const AdminProductUpload = () => {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
             <div key={i} className="relative">
-              <img src={`${API_BASE}${img}`} className="w-full h-24 object-cover rounded" />
+              <img src={img} className="w-full h-24 object-cover rounded" />
               <button
                 onClick={() => handleImageRemove(img)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
