@@ -156,6 +156,10 @@ const AdminProductUpload = () => {
       }
     })
 
+    if (editingProduct) {
+      formData.append("removedImages", JSON.stringify(removedImages)); // ✅ Add this line here
+    }
+
     const formData = new FormData()
     formData.append("name", name)
     formData.append("variants", JSON.stringify(preparedVariants))
@@ -170,23 +174,20 @@ const AdminProductUpload = () => {
       },
     });
 
-    if (editingProduct) {
-      formData.append("removedImages", JSON.stringify(removedImages))
-    }
-
     for (const pair of formData.entries()) {
       console.log(`📝 ${pair[0]}:`, pair[1])
     }
 
     try {
       if (editingProduct) {
+        formData.append("removedImages", JSON.stringify(removedImages))
         const res = await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         })
         alert("✅ Product updated")
         console.log("🟢 Updated:", res.data)
       } else {
-        const res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
+      await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         })
         alert("✅ Product uploaded")
