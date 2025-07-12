@@ -9,7 +9,7 @@ const AdminHome = () => {
       <div className="flex flex-col gap-4">
         <Link
           to="/admin/banners"
-          className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+          className="bg-pink-600 text-white py-2 rounded hover:bg-pink-700 transition"
         >
           Manage Banners
         </Link>
