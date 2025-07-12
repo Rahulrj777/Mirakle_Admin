@@ -20,6 +20,9 @@ const AdminHome = () => {
           Manage Products
         </Link>
       </div>
+      <h1 className="text-2xl font-bold mb-6">
+        Admin Panel <span className="text-sm text-gray-500">(v2)</span>
+      </h1>
     </div>
   );
 };
