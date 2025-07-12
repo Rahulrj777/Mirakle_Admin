@@ -2,9 +2,9 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import AdminHome from "../Pages/AdminHome"
 import AdminBannerUpload from "../Pages/AdminBannerUpload"
 import AdminProductUpload from "../Pages/AdminProductUplode"
-import LoginPage from "../components/LoginPage"
-import SignUpPage from "../components/SignUpPage"
-import AuthGuard from "../components/AuthGuard" 
+import LoginPage from "../Componenets/LoginPage"
+import SignUpPage from "../Componenets/SignUpPage"
+import AuthGuard from "../Componenets/AuthGuard" 
 
 const Routing = () => {
   return (
