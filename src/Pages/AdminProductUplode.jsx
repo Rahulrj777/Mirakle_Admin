@@ -170,11 +170,25 @@ export default function AdminProductUpload() {
 
     const token = localStorage.getItem("authToken") // or sessionStorage.getItem("authToken");
 
+    console.log("--- Submitting Product Data ---")
+    console.log("Name:", name)
+    console.log("Variants:", preparedVariants)
+    console.log("Description:", description)
+    console.log("Details:", detailsObject)
+    console.log("Keywords:", keywordsList)
+    console.log("New Images Count:", images.length)
+    console.log("Existing Images to Remove Count:", removedImages.length)
+    if (editingProduct) {
+      console.log("Editing Product ID:", editingProduct._id)
+      formData.append("removedImages", JSON.stringify(removedImages)) // Send removed images for update
+    }
+    console.log("Token:", token ? "Present" : "Missing")
+    console.log("-----------------------------")
+
     try {
       let res
       if (editingProduct) {
         // Update existing product
-        formData.append("removedImages", JSON.stringify(removedImages)) // Send removed images for update
         res = await axios.put(
           `${API_BASE}/api/products/${editingProduct._id}`, // Corrected endpoint for update
           formData,
@@ -194,7 +208,7 @@ export default function AdminProductUpload() {
           formData,
           {
             headers: {
-              "Content-Type": "multipart/form-Cdata",
+              "Content-Type": "multipart/form-data",
               Authorization: `Bearer ${token}`,
             },
           },
