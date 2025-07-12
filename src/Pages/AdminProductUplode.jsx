@@ -134,72 +134,58 @@ const AdminProductUpload = () => {
     setKeywordsList(copy)
   }
 
-  const handleSubmit = async () => {
-    console.log("🔘 Submit button clicked")
-    if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
-      alert("Product name and current price are required")
-      console.warn("❌ Validation failed", { name, variants })
-      return
-    }
-
-    const preparedVariants = variants.map((v) => ({
-      size: `${v.sizeValue}${v.sizeUnit}`,
-      price: Number.parseFloat(v.price),
-      discountPercent: Number.parseFloat(v.discountPercent),
-      stock: Number.parseInt(v.stock),
-    }))
-
-    const detailsObject = {}
-    detailsList.forEach((item) => {
-      if (item.key && item.value) {
-        detailsObject[item.key] = item.value
-      }
-    })
-
-    if (editingProduct) {
-      formData.append("removedImages", JSON.stringify(removedImages)); // ✅ Add this line here
-    }
-
-    const formData = new FormData()
-    formData.append("name", name)
-    formData.append("variants", JSON.stringify(preparedVariants))
-    formData.append("description", description)
-    formData.append("details", JSON.stringify(detailsObject))
-    formData.append("keywords", JSON.stringify(keywordsList)) 
-    images.forEach((img) => formData.append("images", img))
-
-    await axios.put(`${API_BASE}/api/products/update/${productId}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    for (const pair of formData.entries()) {
-      console.log(`📝 ${pair[0]}:`, pair[1])
-    }
-
-    try {
-      if (editingProduct) {
-        formData.append("removedImages", JSON.stringify(removedImages))
-        const res = await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        })
-        alert("✅ Product updated")
-        console.log("🟢 Updated:", res.data)
-      } else {
-      await axios.put(`${API_BASE}/api/products/${editingProduct._id}`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        })
-        alert("✅ Product uploaded")
-        console.log("🟢 Uploaded:", res.data)
-      }
-      resetForm()
-      fetchProducts()
-    } catch (err) {
-      console.error("❌ Upload error:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Upload failed")
-    }
+ const handleSubmit = async () => {
+  console.log("🔘 Submit button clicked")
+  if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
+    alert("Product name and current price are required")
+    console.warn("❌ Validation failed", { name, variants })
+    return
   }
+
+  const preparedVariants = variants.map((v) => ({
+    size: `${v.sizeValue}${v.sizeUnit}`,
+    price: Number.parseFloat(v.price),
+    discountPercent: Number.parseFloat(v.discountPercent),
+    stock: Number.parseInt(v.stock),
+  }))
+
+  const detailsObject = {}
+  detailsList.forEach((item) => {
+    if (item.key && item.value) {
+      detailsObject[item.key] = item.value
+    }
+  })
+
+  const formData = new FormData()
+  formData.append("name", name)
+  formData.append("variants", JSON.stringify(preparedVariants))
+  formData.append("description", description)
+  formData.append("details", JSON.stringify(detailsObject))
+  formData.append("keywords", JSON.stringify(keywordsList)) 
+  images.forEach((img) => formData.append("images", img))
+
+  const token = localStorage.getItem("authToken"); // or sessionStorage.getItem("authToken");
+
+  try {
+    const res = await axios.put(
+      `${API_BASE}/api/products/update/${productId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,  // Add token in Authorization header
+        },
+      }
+    )
+
+    alert("✅ Product updated");
+    console.log("🟢 Updated:", res.data);
+  } catch (err) {
+    console.error("❌ Upload error:", err.response?.data || err.message);
+    alert(err.response?.data?.message || "Upload failed");
+  }
+};
+
 
   const handleEdit = (product) => {
     setEditingProduct(product)
