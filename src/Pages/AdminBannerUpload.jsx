@@ -22,6 +22,7 @@ const AdminBannerUpload = () => {
   const fetchBanners = async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/banners`)
+      console.log("Fetched Banners:", res.data) // Log fetched banners
       setBanners(res.data)
     } catch (err) {
       console.error("Failed to fetch banners:", err)
@@ -122,6 +123,10 @@ const AdminBannerUpload = () => {
         formData.append("weightValue", sizeMatch[1])
         formData.append("weightUnit", sizeMatch[2])
       }
+      // Ensure no image file is sent for product-type/side banners
+      setImage(null)
+      const fileInput = document.getElementById("banner-file")
+      if (fileInput) fileInput.value = ""
     } else {
       // For 'main' (formerly 'slider') and 'offer' types, an image file is required
       if (!image) {
