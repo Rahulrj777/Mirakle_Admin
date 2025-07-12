@@ -1,20 +1,14 @@
+"use client"
+
 import { Navigate } from "react-router-dom"
-import Routing from "./Routing/Routing"
 
 const AuthGuard = ({ children }) => {
   const token = localStorage.getItem("authToken")
   if (!token) {
+    // Redirect to login if no token is found
     return <Navigate to="/login" replace />
   }
   return children
 }
 
-function App() {
-  return (
-    <>
-      <Routing />
-    </>
-  )
-}
-
-export default App
+export default AuthGuard
