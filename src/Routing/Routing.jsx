@@ -1,5 +1,3 @@
-"use client"
-
 import { Routes, Route, Navigate } from "react-router-dom"
 import AdminHome from "../Pages/AdminHome"
 import AdminBannerUpload from "../Pages/AdminBannerUpload"
