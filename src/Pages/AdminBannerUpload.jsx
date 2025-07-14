@@ -423,7 +423,7 @@ const AdminBannerUpload = () => {
             {banner.price > 0 && (
               <div className="text-center text-sm mt-1">
                 <span className="text-green-700 font-semibold">₹ {Number(banner.price).toFixed(0)}</span>
-                {banner.oldPrice > 0 && (
+                {banner.oldPrice > banner.price && (
                   <span className="text-gray-400 line-through ml-2 text-xs">
                     ₹ {Number(banner.oldPrice).toFixed(0)}
                   </span>
