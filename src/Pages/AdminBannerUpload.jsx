@@ -123,8 +123,12 @@ const AdminBannerUpload = () => {
 
       for (const productId of selectedProductIds) {
         const product = products.find((p) => p._id === productId);
-        const variant = product?.variants?.[selectedVariantIndex];
-
+          let variant = null;
+          if (selectedProductIds.length === 1) {
+            variant = product?.variants?.[selectedVariantIndex];
+          } else {
+            variant = product?.variants?.[0]; 
+          }
         if (!product || !variant) continue;
 
         const productImageUrl = product.images?.others?.[0] || "";
