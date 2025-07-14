@@ -1,32 +1,26 @@
 import { useState } from "react"
 import axios from "axios"
-import { useNavigate } from "react-router-dom" // For navigation after login
-import { API_BASE } from "../utils/api" // Your API base URL
+import { useNavigate } from "react-router-dom"
+import { API_BASE } from "../utils/api" 
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
-  const navigate = useNavigate() // Hook to navigate programmatically
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError("") // Clear previous errors
+    setError("")
 
     try {
       const res = await axios.post(`${API_BASE}/api/login`, { email, password })
-
-      // Store the token in localStorage
       localStorage.setItem("authToken", res.data.token)
-
-      // Optionally store user info (e.g., isAdmin)
       localStorage.setItem("user", JSON.stringify(res.data.user))
-
       alert("Login successful!")
       console.log("Login successful:", res.data)
 
-      // Redirect to the admin product upload page
-      navigate("/admin/products")
+      navigate("/admin")
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message)
       setError(err.response?.data?.message || "Login failed. Please check your credentials.")
