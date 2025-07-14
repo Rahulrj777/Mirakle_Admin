@@ -154,13 +154,14 @@ const AdminBannerUpload = () => {
         }
 
         try {
-          await axios.post(`${API_BASE}/api/banners/upload`, formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-          successCount++;
-        } catch (err) {
-          console.error(`Upload error for ${product.title}:`, err);
-        }
+  const res = await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  console.log(`Uploaded banner for ${product.title}`, res.data);
+  successCount++;
+} catch (err) {
+  console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message);
+}
       }
 
       if (successCount > 0) {
