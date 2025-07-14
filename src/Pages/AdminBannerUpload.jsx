@@ -8,7 +8,7 @@ const AdminBannerUpload = () => {
   const [type, setType] = useState("main")
   const [banners, setBanners] = useState([])
   const [products, setProducts] = useState([])
-  const [selectedProductId, setSelectedProductId] = useState("")
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
 
@@ -78,78 +78,100 @@ const AdminBannerUpload = () => {
 
   const handleUpload = async () => {
     if (type === "all") {
-      alert("Cannot upload when 'Show All' is selected")
-      return
+      alert("Cannot upload when 'Show All' is selected");
+      return;
     }
 
-    const formData = new FormData()
-    formData.append("type", type)
-
-    if (type === "product-type" || type === "side") {
-      if (!selectedProductId) {
-        alert("Please select a product")
-        return
-      }
-      const product = getSelectedProduct()
-      const variant = getSelectedVariant()
-
-      if (!product || !variant) {
-        alert("Invalid product or variant selection")
-        return
-      }
-
-      const productImageUrl = product.images?.others?.[0] || ""
-      if (!productImageUrl) {
-        alert("Selected product does not have an image.")
-        return
-      }
-
-      const discount = Number.parseFloat(variant.discountPercent) || 0
-      const price = Number.parseFloat(variant.price) || 0
-      const oldPrice = discount > 0 ? price / (1 - discount / 100) : price
-
-      formData.append("productId", selectedProductId)
-      formData.append("productImageUrl", productImageUrl)
-      formData.append("title", product.title)
-      formData.append("price", price.toFixed(2))
-      formData.append("oldPrice", oldPrice.toFixed(2))
-      formData.append("discountPercent", discount.toString())
-
-      const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
-      if (sizeMatch) {
-        formData.append("weightValue", sizeMatch[1])
-        formData.append("weightUnit", sizeMatch[2])
-      }
-
-      setImage(null)
-      const fileInput = document.getElementById("banner-file")
-      if (fileInput) fileInput.value = ""
-    } else {
+    // Handle 'main' and 'offer' types (image upload only)
+    if (type === "main" || type === "offer") {
       if (!image) {
-        alert("Please select an image")
-        return
+        alert("Please select an image");
+        return;
       }
-      const hash = await computeFileHash(image) 
-      formData.append("image", image)
-      formData.append("hash", hash)
+
+      const hash = await computeFileHash(image);
+      const formData = new FormData();
+      formData.append("type", type);
+      formData.append("image", image);
+      formData.append("hash", hash);
+
+      try {
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Banner uploaded successfully");
+        fetchBanners();
+        setImage(null);
+        const fileInput = document.getElementById("banner-file");
+        if (fileInput) fileInput.value = "";
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert(err.response?.data?.message || "Upload failed");
+      }
+      return;
     }
 
-    try {
-      await axios.post(`${API_BASE}/api/banners/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-      alert("Banner uploaded successfully")
-      fetchBanners()
-      setImage(null)
-      setSelectedProductId("")
-      setSelectedVariantIndex(0)
-      const fileInput = document.getElementById("banner-file")
-      if (fileInput) fileInput.value = "" // Clear file input
-    } catch (err) {
-      console.error("Upload error:", err)
-      alert(err.response?.data?.message || "Upload failed")
+    // Handle 'side' and 'product-type' (multi product upload)
+    if (type === "side" || type === "product-type") {
+      if (selectedProductIds.length === 0) {
+        alert("Please select at least one product");
+        return;
+      }
+
+      let successCount = 0;
+
+      for (const productId of selectedProductIds) {
+        const product = products.find((p) => p._id === productId);
+        const variant = product?.variants?.[selectedVariantIndex];
+
+        if (!product || !variant) continue;
+
+        const productImageUrl = product.images?.others?.[0] || "";
+        if (!productImageUrl) continue;
+
+        const discount = Number.parseFloat(variant.discountPercent) || 0;
+        const price = Number.parseFloat(variant.price) || 0;
+        const oldPrice = discount > 0 ? price / (1 - discount / 100) : price;
+
+        const formData = new FormData();
+        formData.append("type", type);
+        formData.append("productId", productId);
+        formData.append("productImageUrl", productImageUrl);
+        formData.append("title", product.title);
+        formData.append("price", price.toFixed(2));
+        formData.append("oldPrice", oldPrice.toFixed(2));
+        formData.append("discountPercent", discount.toString());
+
+        const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/);
+        if (sizeMatch) {
+          formData.append("weightValue", sizeMatch[1]);
+          formData.append("weightUnit", sizeMatch[2]);
+        }
+
+        try {
+          await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Upload error for ${product.title}:`, err);
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`Uploaded ${successCount} banner(s) successfully`);
+        fetchBanners();
+      } else {
+        alert("No banners uploaded. Please check product images or errors.");
+      }
+
+      setSelectedProductIds([]);
+      setSelectedVariantIndex(0);
+      return;
     }
-  }
+
+    alert("Unknown banner type");
+  };
 
   const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this banner?")) {
@@ -216,13 +238,15 @@ const AdminBannerUpload = () => {
                 className="mb-2 p-2 border w-full rounded"
               />
               <select
-                value={selectedProductId}
+                multiple
+                value={selectedProductIds}
                 onChange={(e) => {
-                  setSelectedProductId(e.target.value)
-                  setSelectedVariantIndex(0)
+                  const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
+                  setSelectedProductIds(options);
+                  setSelectedVariantIndex(0); // optional reset
                 }}
                 className="mb-2 p-2 border w-full"
-                size="5"
+                size="8"
               >
                 <option value="">-- Select a Product --</option>
                 {filteredProducts.map((product) => (
