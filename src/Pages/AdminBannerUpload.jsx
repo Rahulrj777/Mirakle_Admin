@@ -237,24 +237,30 @@ const AdminBannerUpload = () => {
                 onChange={(e) => setProductSearchTerm(e.target.value)}
                 className="mb-2 p-2 border w-full rounded"
               />
-              <select
-                multiple
-                value={selectedProductIds}
-                onChange={(e) => {
-                  const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
-                  setSelectedProductIds(options);
-                  setSelectedVariantIndex(0); // Reset variant when changing products
-                }}
-                className="mb-2 p-2 border w-full"
-                size="8"
-              >
-                <option disabled>-- Select Products --</option>
-                {filteredProducts.map((product) => (
-                  <option key={product._id} value={product._id}>
-                    {product.title}
-                  </option>
-                ))}
-              </select>
+              <div className="mb-3">
+                <label className="block text-sm font-medium mb-2">Select Products:</label>
+                <div className="max-h-60 overflow-y-auto border rounded p-2">
+                  {filteredProducts.map((product) => (
+                    <label key={product._id} className="flex items-center gap-2 mb-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        value={product._id}
+                        checked={selectedProductIds.includes(product._id)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          const value = e.target.value;
+                          setSelectedVariantIndex(0); // Reset variant
+                          setSelectedProductIds((prevIds) =>
+                            checked ? [...prevIds, value] : prevIds.filter((id) => id !== value)
+                          );
+                        }}
+                        className="accent-green-600"
+                      />
+                      <span className="text-sm">{product.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               {/* Variant Dropdown if only one product is selected and it has multiple variants */}
               {selectedProductIds.length === 1 && selectedProduct?.variants?.length > 1 && (
