@@ -5,7 +5,7 @@ import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
-  const [type, setType] = useState("main") // Changed default from "slider" to "main"
+  const [type, setType] = useState("main")
   const [banners, setBanners] = useState([])
   const [products, setProducts] = useState([])
   const [selectedProductId, setSelectedProductId] = useState("")
@@ -20,7 +20,7 @@ const AdminBannerUpload = () => {
   const fetchBanners = async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/banners`)
-      console.log("Fetched Banners:", res.data) // Log fetched banners
+      console.log("Fetched Banners:", res.data)
       setBanners(res.data)
     } catch (err) {
       console.error("Failed to fetch banners:", err)
@@ -63,7 +63,7 @@ const AdminBannerUpload = () => {
     const file = e.target.files[0]
     if (!file || !file.type.startsWith("image/")) {
       alert("Only image files are allowed")
-      setImage(null) // Clear image if invalid
+      setImage(null)
       return
     }
     setImage(file)
@@ -98,7 +98,6 @@ const AdminBannerUpload = () => {
         return
       }
 
-      // Use product's image URL directly, no new image upload needed for these types
       const productImageUrl = product.images?.others?.[0] || ""
       if (!productImageUrl) {
         alert("Selected product does not have an image.")
@@ -110,8 +109,8 @@ const AdminBannerUpload = () => {
       const oldPrice = discount > 0 ? price / (1 - discount / 100) : price
 
       formData.append("productId", selectedProductId)
-      formData.append("productImageUrl", productImageUrl) // Send product's image URL
-      formData.append("title", product.title) // Send product title
+      formData.append("productImageUrl", productImageUrl)
+      formData.append("title", product.title)
       formData.append("price", price.toFixed(2))
       formData.append("oldPrice", oldPrice.toFixed(2))
       formData.append("discountPercent", discount.toString())
@@ -121,17 +120,16 @@ const AdminBannerUpload = () => {
         formData.append("weightValue", sizeMatch[1])
         formData.append("weightUnit", sizeMatch[2])
       }
-      // Ensure no image file is sent for product-type/side banners
+
       setImage(null)
       const fileInput = document.getElementById("banner-file")
       if (fileInput) fileInput.value = ""
     } else {
-      // For 'main' (formerly 'slider') and 'offer' types, an image file is required
       if (!image) {
         alert("Please select an image")
         return
       }
-      const hash = await computeFileHash(image) // Hash is not used in schema, but kept for consistency if you add it later
+      const hash = await computeFileHash(image) 
       formData.append("image", image)
       formData.append("hash", hash)
     }
@@ -169,7 +167,7 @@ const AdminBannerUpload = () => {
     const currentType = type === "all" ? "all" : type
     const typeNames = {
       all: "ALL",
-      main: "Banner", // Changed from slider to main
+      main: "Banner",
       side: "Top Selling Product's",
       offer: "Offer Zone",
       "product-type": "Our Special Product's",
@@ -200,7 +198,7 @@ const AdminBannerUpload = () => {
       <h2 className="text-2xl font-bold mb-4">Admin Banner Upload Panel</h2>
       <select value={type} onChange={(e) => setType(e.target.value)} className="border p-2 w-full mb-4">
         <option value="all">Show All (View Only)</option>
-        <option value="main">Banner</option> {/* Changed from slider to main */}
+        <option value="main">Banner</option>
         <option value="side">Top Selling Product's</option>
         <option value="offer">Offer Zone</option>
         <option value="product-type">Our Special Product's</option>
