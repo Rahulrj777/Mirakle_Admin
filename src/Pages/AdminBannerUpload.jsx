@@ -364,13 +364,8 @@ const AdminBannerUpload = () => {
             </>
           )}
           <button
-            onClick={handleUpload}
-            disabled={
-              (type === "main" || type === "offer") ? !image :
-              (type === "side" || type === "product-type") ? selectedProductIds.length === 0 :
-              true
-            }
-            className={`px-4 py-2 rounded text-white ${
+              onClick={() => setTimeout(handleUpload, 100)}
+              className={`px-4 py-2 rounded text-white ${
               ((type === "main" || type === "offer") && image) ||
               ((type === "side" || type === "product-type") && selectedProductIds.length > 0)
                 ? "bg-green-600 hover:bg-green-700"
