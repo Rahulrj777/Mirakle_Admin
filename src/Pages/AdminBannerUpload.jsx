@@ -69,8 +69,8 @@ const AdminBannerUpload = () => {
     setImage(file)
   }
 
-  const getSelectedProduct = () => products.find((p) => p._id === selectedProductId)
-  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex]
+  const getSelectedProduct = () => products.find((p) => p._id === selectedProductIds[0]) || null;
+  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex] || null;
 
   const filteredProducts = products.filter((product) =>
     product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
@@ -104,6 +104,7 @@ const AdminBannerUpload = () => {
         setImage(null);
         const fileInput = document.getElementById("banner-file");
         if (fileInput) fileInput.value = "";
+        setImage(null);
       } catch (err) {
         console.error("Upload error:", err);
         alert(err.response?.data?.message || "Upload failed");
@@ -164,7 +165,6 @@ const AdminBannerUpload = () => {
       } else {
         alert("No banners uploaded. Please check product images or errors.");
       }
-
       setSelectedProductIds([]);
       setSelectedVariantIndex(0);
       return;
@@ -248,28 +248,33 @@ const AdminBannerUpload = () => {
                 className="mb-2 p-2 border w-full"
                 size="8"
               >
-                <option value="">-- Select a Product --</option>
+                <option disabled>-- Select Products --</option>
                 {filteredProducts.map((product) => (
                   <option key={product._id} value={product._id}>
                     {product.title}
                   </option>
                 ))}
               </select>
-              {selectedProduct && selectedProduct.variants?.length > 1 && (
-                <div className="mb-2">
-                  <label className="block text-sm font-medium mb-1">Select Variant:</label>
-                  <select
-                    value={selectedVariantIndex}
-                    onChange={(e) => setSelectedVariantIndex(Number(e.target.value))}
-                    className="p-2 border w-full"
-                  >
-                    {selectedProduct.variants.map((variant, index) => (
-                      <option key={index} value={index}>
-                        {variant.size} - ₹{variant.price}
-                        {variant.discountPercent > 0 && ` (${variant.discountPercent}% off)`}
-                      </option>
-                    ))}
-                  </select>
+              {selectedProductIds.length === 1 && selectedProduct && selectedVariant && (
+                <div className="bg-gray-50 p-3 rounded border">
+                  <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
+                  <div className="flex gap-3">
+                    {selectedProduct.images?.others?.[0] && (
+                      <img
+                        src={`${API_BASE}${selectedProduct.images.others[0]}`}
+                        alt={selectedProduct.title}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    )}
+                    <div className="text-sm">
+                      <p className="font-medium">{selectedProduct.title}</p>
+                      <p className="text-gray-600">{selectedVariant.size}</p>
+                      <p className="text-green-600 font-semibold">₹{selectedVariant.price}</p>
+                      {selectedVariant.discountPercent > 0 && (
+                        <p className="text-red-500 text-xs">{selectedVariant.discountPercent}% OFF</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
               {selectedProduct && selectedVariant && (
@@ -308,7 +313,20 @@ const AdminBannerUpload = () => {
               )}
             </>
           )}
-          <button onClick={handleUpload} className="bg-green-600 text-white px-4 py-2 rounded">
+          <button
+            onClick={handleUpload}
+            disabled={
+              (type === "main" || type === "offer") ? !image :
+              (type === "side" || type === "product-type") ? selectedProductIds.length === 0 :
+              true
+            }
+            className={`px-4 py-2 rounded text-white ${
+              ((type === "main" || type === "offer") && image) ||
+              ((type === "side" || type === "product-type") && selectedProductIds.length > 0)
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
+          >
             Upload Banner
           </button>
         </div>
