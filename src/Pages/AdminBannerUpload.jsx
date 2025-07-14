@@ -243,7 +243,9 @@ const AdminBannerUpload = () => {
                 className="mb-2 p-2 border w-full rounded"
               />
               <div className="mb-3">
-                <label className="block text-sm font-medium mb-2">Select Products (Max 3):</label>
+                <label className="block text-sm font-medium mb-2">
+                  Select Products (Max {type === "product-type" ? 10 : 3}):
+                </label>
                 <div className="max-h-60 overflow-y-auto border rounded p-2">
                   {filteredProducts.map((product) => (
                     <label key={product._id} className="flex items-center gap-2 mb-2 cursor-pointer">
@@ -252,23 +254,26 @@ const AdminBannerUpload = () => {
                         value={product._id}
                         checked={selectedProductIds.includes(product._id)}
                         onChange={(e) => {
-                          const checked = e.target.checked;
-                          const value = e.target.value;
+                        const checked = e.target.checked;
+                        const value = e.target.value;
 
-                          setSelectedVariantIndex(0);
+                        setSelectedVariantIndex(0);
 
-                          setSelectedProductIds((prevIds) => {
-                            if (checked) {
-                              if (prevIds.length >= 3) {
-                                alert("You can select a maximum of 3 products only.");
-                                return prevIds;
-                              }
-                              return [...prevIds, value];
-                            } else {
-                              return prevIds.filter((id) => id !== value);
+                        setSelectedProductIds((prevIds) => {
+                          const maxSelections = type === "product-type" ? 10 : 3;
+
+                          if (checked) {
+                            if (prevIds.includes(value)) return prevIds;
+                            if (prevIds.length >= maxSelections) {
+                              alert(`You can select a maximum of ${maxSelections} products only.`);
+                              return prevIds;
                             }
-                          });
-                        }}
+                            return [...prevIds, value];
+                          } else {
+                            return prevIds.filter((id) => id !== value);
+                          }
+                        });
+                      }}
                         className="accent-green-600"
                       />
                       <span className="text-sm">{product.title}</span>
