@@ -135,8 +135,8 @@ const AdminBannerUpload = () => {
         if (!productImageUrl) continue;
 
         const discount = Number.parseFloat(variant.discountPercent) || 0;
-        const price = Number.parseFloat(variant.price) || 0;
-        const oldPrice = discount > 0 ? price / (1 - discount / 100) : price;
+        const oldPrice = Number.parseFloat(variant.price) || 0;
+        const price = discount > 0 ? oldPrice * (1 - discount / 100) : oldPrice;
 
         const formData = new FormData();
         formData.append("type", type);
