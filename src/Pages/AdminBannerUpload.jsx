@@ -179,16 +179,23 @@ const AdminBannerUpload = () => {
   };
 
   const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this banner?")) {
-      try {
-        await axios.delete(`${API_BASE}/api/banners/${id}`)
-        fetchBanners()
+  if (window.confirm("Are you sure you want to delete this banner?")) {
+    try {
+      const response = await axios.delete(`${API_BASE}/api/banners/${id}`)
+
+      if (response.status === 200) {
         alert("Banner deleted successfully")
-      } catch (err) {
+        fetchBanners() // or manually remove from state if needed
+      } else {
+        console.error("Unexpected response:", response)
         alert("Failed to delete banner")
       }
+    } catch (err) {
+      console.error("Delete error:", err)
+      alert("Failed to delete banner")
     }
   }
+}
 
   const handleDeleteAll = async () => {
     const currentType = type === "all" ? "all" : type
