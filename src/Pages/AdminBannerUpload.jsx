@@ -229,7 +229,7 @@ const AdminBannerUpload = () => {
         <div className="bg-white shadow p-4 rounded mb-6">
           {(type === "product-type" || type === "side") && (
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Select Product:</label>
+              <label className="block text-sm font-medium mb-2">Select Product(s):</label>
               <input
                 type="text"
                 placeholder="Search products..."
@@ -243,7 +243,7 @@ const AdminBannerUpload = () => {
                 onChange={(e) => {
                   const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
                   setSelectedProductIds(options);
-                  setSelectedVariantIndex(0); // optional reset
+                  setSelectedVariantIndex(0); // Reset variant when changing products
                 }}
                 className="mb-2 p-2 border w-full"
                 size="8"
@@ -255,6 +255,27 @@ const AdminBannerUpload = () => {
                   </option>
                 ))}
               </select>
+
+              {/* Variant Dropdown if only one product is selected and it has multiple variants */}
+              {selectedProductIds.length === 1 && selectedProduct?.variants?.length > 1 && (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">Select Variant:</label>
+                  <select
+                    value={selectedVariantIndex}
+                    onChange={(e) => setSelectedVariantIndex(Number(e.target.value))}
+                    className="p-2 border w-full"
+                  >
+                    {selectedProduct.variants.map((variant, index) => (
+                      <option key={index} value={index}>
+                        {variant.size} - ₹{variant.price}
+                        {variant.discountPercent > 0 && ` (${variant.discountPercent}% OFF)`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Product Preview Block */}
               {selectedProductIds.length === 1 && selectedProduct && selectedVariant && (
                 <div className="bg-gray-50 p-3 rounded border">
                   <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
@@ -277,26 +298,35 @@ const AdminBannerUpload = () => {
                   </div>
                 </div>
               )}
-              {selectedProduct && selectedVariant && (
-                <div className="bg-gray-50 p-3 rounded border">
-                  <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
-                  <div className="flex gap-3">
-                    {selectedProduct.images?.others?.[0] && (
-                      <img
-                        src={`${API_BASE}${selectedProduct.images.others[0]}`}
-                        alt={selectedProduct.title}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    )}
-                    <div className="text-sm">
-                      <p className="font-medium">{selectedProduct.title}</p>
-                      <p className="text-gray-600">{selectedVariant.size}</p>
-                      <p className="text-green-600 font-semibold">₹{selectedVariant.price}</p>
-                      {selectedVariant.discountPercent > 0 && (
-                        <p className="text-red-500 text-xs">{selectedVariant.discountPercent}% OFF</p>
-                      )}
-                    </div>
-                  </div>
+
+              {/* Multiple product preview grid if more than 1 selected */}
+              {selectedProductIds.length > 1 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  {selectedProductIds.map((productId) => {
+                    const product = products.find((p) => p._id === productId);
+                    const variant = product?.variants?.[0];
+                    if (!product || !variant) return null;
+
+                    return (
+                      <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
+                        {product.images?.others?.[0] && (
+                          <img
+                            src={`${API_BASE}${product.images.others[0]}`}
+                            alt={product.title}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                        )}
+                        <div className="text-sm">
+                          <p className="font-medium">{product.title}</p>
+                          <p className="text-gray-600">{variant.size}</p>
+                          <p className="text-green-600 font-semibold">₹{variant.price}</p>
+                          {variant.discountPercent > 0 && (
+                            <p className="text-red-500 text-xs">{variant.discountPercent}% OFF</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
