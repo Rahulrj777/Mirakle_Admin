@@ -11,6 +11,7 @@ const AdminBannerUpload = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
+  const [bannerTitle, setBannerTitle] = useState("");
 
   useEffect(() => {
     fetchBanners()
@@ -112,8 +113,39 @@ const AdminBannerUpload = () => {
       return;
     }
 
+    if (type === "side") {
+      if (!image || !bannerTitle.trim()) {
+        alert("Please select an image and enter a banner name.");
+        return;
+      }
+
+      const hash = await computeFileHash(image);
+      const formData = new FormData();
+      formData.append("type", "side");
+      formData.append("image", image);
+      formData.append("hash", hash);
+      formData.append("title", bannerTitle.trim());
+
+      try {
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Side banner uploaded successfully.");
+        setImage(null);
+        setBannerTitle("");
+        fetchBanners();
+        const fileInput = document.getElementById("banner-file");
+        if (fileInput) fileInput.value = "";
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert(err.response?.data?.message || "Upload failed.");
+      }
+
+      return;
+    }
+
     // Handle 'side' and 'product-type' (multi product upload)
-    if (type === "side" || type === "product-type") {
+    if (type === "product-type") {
       if (selectedProductIds.length === 0) {
         alert("Please select at least one product");
         return;
@@ -154,14 +186,14 @@ const AdminBannerUpload = () => {
         }
 
         try {
-  const res = await axios.post(`${API_BASE}/api/banners/upload`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  console.log(`Uploaded banner for ${product.title}`, res.data);
-  successCount++;
-} catch (err) {
-  console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message);
-}
+          const res = await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+          console.log(`Uploaded banner for ${product.title}`, res.data);
+          successCount++;
+        } catch (err) {
+          console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message);
+        }
       }
 
       if (successCount > 0) {
@@ -239,7 +271,7 @@ const AdminBannerUpload = () => {
       </select>
       {type !== "all" && (
         <div className="bg-white shadow p-4 rounded mb-6">
-          {(type === "product-type" || type === "side") && (
+          { type === "product-type" && (
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Product(s):</label>
               <input
@@ -364,6 +396,30 @@ const AdminBannerUpload = () => {
               )}
             </div>
           )}
+          {type === "side" && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Side Banner Title</label>
+                <input
+                  type="text"
+                  value={bannerTitle}
+                  onChange={(e) => setBannerTitle(e.target.value)}
+                  placeholder="e.g., Cold Drinks, Top Deals"
+                  className="p-2 border w-full rounded"
+                />
+              </div>
+
+              <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
+              
+              {image && (
+                <img
+                  src={URL.createObjectURL(image)}
+                  alt="Preview"
+                  className="mb-4 w-full h-64 object-cover rounded border"
+                />
+              )}
+            </>
+          )}
           {(type === "main" || type === "offer") && ( // Changed from slider to main
             <>
               <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
@@ -380,7 +436,7 @@ const AdminBannerUpload = () => {
               onClick={() => setTimeout(handleUpload, 100)}
               className={`px-4 py-2 rounded text-white ${
               ((type === "main" || type === "offer") && image) ||
-              ((type === "side" || type === "product-type") && selectedProductIds.length > 0)
+              (type === "product-type" && selectedProductIds.length > 0)
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
@@ -393,7 +449,8 @@ const AdminBannerUpload = () => {
         <h3 className="text-lg font-semibold">
           {type === "all"
             ? "All Uploaded Banners"
-            : `${type === "main" ? "Banner" : type === "side" ? "Top Selling Product's" : type === "offer" ? "Offer Zone" : "Our Special Product's"} (${filteredBanners.length})`}
+            : `${type === "main"? "Main Banners": type === "side"? "Side Banners": type === "offer"? "Offer Zone": "Product Type Banners"} (${filteredBanners.length})`
+          }
         </h3>
         {filteredBanners.length > 0 && (
           <button
@@ -402,7 +459,8 @@ const AdminBannerUpload = () => {
           >
             {type === "all"
               ? "Delete All Banners"
-              : `Delete All ${type === "main" ? "Banner" : type === "side" ? "Top Selling" : type === "offer" ? "Offer" : "Special Product"} Banners`}
+              : `Delete All ${type === "main"? "Main": type === "side"? "Side": type === "offer"? "Offer": "Product Type"} Banners`
+            }
           </button>
         )}
       </div>
