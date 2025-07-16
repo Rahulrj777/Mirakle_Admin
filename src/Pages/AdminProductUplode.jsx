@@ -345,7 +345,7 @@ export default function AdminProductUpload() {
         + Add Variant
       </button>
       {/*🚨 NEW: Product Type Selection */}
-      <label className="block mb-2 font-semibold">Product Type</label>
+      <label className="block mb-2 mt-6 font-semibold">Product Type</label>
         <select
           value={productType}
           onChange={(e) => setProductType(e.target.value)}
