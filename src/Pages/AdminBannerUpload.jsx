@@ -5,7 +5,7 @@ import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
-  const [type, setType] = useState("main")
+  const [type, setType] = useState("homebanner")
   const [banners, setBanners] = useState([])
   const [products, setProducts] = useState([])
   const [selectedProductIds, setSelectedProductIds] = useState([]);
@@ -84,7 +84,7 @@ const AdminBannerUpload = () => {
     }
 
     // Handle 'main' and 'offer' types (image upload only)
-    if (type === "main" || type === "offer") {
+    if (type === "homebanner" || type === "offer") {
       if (!image) {
         alert("Please select an image");
         return;
@@ -113,7 +113,7 @@ const AdminBannerUpload = () => {
       return;
     }
 
-    if (type === "side") {
+    if (type === "category") {
       if (!image || !bannerTitle.trim()) {
         alert("Please select an image and enter a banner name.");
         return;
@@ -121,7 +121,7 @@ const AdminBannerUpload = () => {
 
       const hash = await computeFileHash(image);
       const formData = new FormData();
-      formData.append("type", "side");
+      formData.append("type", "category");
       formData.append("image", image);
       formData.append("hash", hash);
       formData.append("title", bannerTitle.trim());
@@ -233,8 +233,8 @@ const AdminBannerUpload = () => {
     const currentType = type === "all" ? "all" : type
     const typeNames = {
       all: "ALL",
-      main: "Banner",
-      side: "Top Selling Product's",
+      homebanner: "Banner",
+      category: "Top Selling Product's",
       offer: "Offer Zone",
       "product-type": "Our Special Product's",
     }
@@ -264,8 +264,8 @@ const AdminBannerUpload = () => {
       <h2 className="text-2xl font-bold mb-4">Admin Banner Upload Panel</h2>
       <select value={type} onChange={(e) => setType(e.target.value)} className="border p-2 w-full mb-4">
         <option value="all">Show All (View Only)</option>
-        <option value="main">Banner</option>
-        <option value="side">Top Selling Product's</option>
+        <option value="homebanner">Banner</option>
+        <option value="category">Top Selling Product's</option>
         <option value="offer">Offer Zone</option>
         <option value="product-type">Our Special Product's</option>
       </select>
@@ -396,10 +396,10 @@ const AdminBannerUpload = () => {
               )}
             </div>
           )}
-          {type === "side" && (
+          {type === "category" && (
             <>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Side Banner Title</label>
+                <label className="block text-sm font-medium mb-2">category Banner Title</label>
                 <input
                   type="text"
                   value={bannerTitle}
@@ -420,7 +420,7 @@ const AdminBannerUpload = () => {
               )}
             </>
           )}
-          {(type === "main" || type === "offer") && ( // Changed from slider to main
+          {(type === "homebanner" || type === "offer") && ( // Changed from slider to homebanner
             <>
               <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
               {image && (
@@ -435,7 +435,7 @@ const AdminBannerUpload = () => {
           <button
               onClick={() => setTimeout(handleUpload, 100)}
               className={`px-4 py-2 rounded text-white ${
-              ((type === "main" || type === "offer") && image) ||
+              ((type === "homebanner" || type === "offer") && image) ||
               (type === "product-type" && selectedProductIds.length > 0)
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
@@ -449,7 +449,7 @@ const AdminBannerUpload = () => {
         <h3 className="text-lg font-semibold">
           {type === "all"
             ? "All Uploaded Banners"
-            : `${type === "main"? "Main Banners": type === "side"? "Side Banners": type === "offer"? "Offer Zone": "Product Type Banners"} (${filteredBanners.length})`
+            : `${type === "homebanner"? "Main Banners": type === "category"? "Side Banners": type === "offer"? "Offer Zone": "Product Type Banners"} (${filteredBanners.length})`
           }
         </h3>
         {filteredBanners.length > 0 && (
@@ -459,7 +459,7 @@ const AdminBannerUpload = () => {
           >
             {type === "all"
               ? "Delete All Banners"
-              : `Delete All ${type === "main"? "Main": type === "side"? "Side": type === "offer"? "Offer": "Product Type"} Banners`
+              : `Delete All ${type === "homebanner"? "Main": type === "category"? "Side": type === "offer"? "Offer": "Product Type"} Banners`
             }
           </button>
         )}
