@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { API_BASE } from "../utils/api" // Assuming this path is correct
+import { API_BASE } from "../utils/api"
 
 export default function AdminProductUpload() {
   const [name, setName] = useState("")
   const [variants, setVariants] = useState([
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
-  const [images, setImages] = useState([]) // For new images to upload
-  const [existingImages, setExistingImages] = useState([]) // For images already on the server
-  const [removedImages, setRemovedImages] = useState([]) // For existing images to remove
+  const [images, setImages] = useState([])
+  const [existingImages, setExistingImages] = useState([])
+  const [removedImages, setRemovedImages] = useState([]) 
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -17,6 +17,9 @@ export default function AdminProductUpload() {
   const [description, setDescription] = useState("")
   const [keywords, setKeywords] = useState("")
   const [keywordsList, setKeywordsList] = useState([])
+  const [productType, setProductType] = useState("")
+
+  const productTypes = ["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"]
 
   useEffect(() => {
     fetchProducts()
@@ -163,6 +166,8 @@ export default function AdminProductUpload() {
     formData.append("description", description)
     formData.append("details", JSON.stringify(detailsObject))
     formData.append("keywords", JSON.stringify(keywordsList))
+    formData.append("productType", productType)
+
 
     images.forEach((img) => formData.append("images", img)) // Append new images
 
@@ -339,6 +344,20 @@ export default function AdminProductUpload() {
       <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
         + Add Variant
       </button>
+      {/*🚨 NEW: Product Type Selection */}
+      <label className="block mb-2 font-semibold">Product Type</label>
+        <select
+          value={productType}
+          onChange={(e) => setProductType(e.target.value)}
+          className="p-2 border w-full mb-4"
+        >
+          <option value="">Select Type</option>
+          {productTypes.map((type, index) => (
+            <option key={index} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
       {/* 🚨 NEW: Keywords Section */}
       <h3 className="text-lg font-semibold mt-6 mb-2">Search Keywords</h3>
       <div className="mb-4">
