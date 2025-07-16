@@ -344,12 +344,13 @@ export default function AdminProductUpload() {
       <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
         + Add Variant
       </button>
+
       {/*🚨 NEW: Product Type Selection */}
       <label className="block mb-2 mt-6 font-semibold">Product Type</label>
         <select
           value={productType}
           onChange={(e) => setProductType(e.target.value)}
-          className="p-2 border w-full mb-4"
+          className="p-2 border w-[150px] "
         >
           <option value="">Select Type</option>
           {productTypes.map((type, index) => (
@@ -358,6 +359,7 @@ export default function AdminProductUpload() {
             </option>
           ))}
         </select>
+
       {/* 🚨 NEW: Keywords Section */}
       <h3 className="text-lg font-semibold mt-6 mb-2">Search Keywords</h3>
       <div className="mb-4">
