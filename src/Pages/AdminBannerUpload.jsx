@@ -433,10 +433,11 @@ const AdminBannerUpload = () => {
             </>
           )}
           <button
-              onClick={() => setTimeout(handleUpload, 100)}
-              className={`px-4 py-2 rounded text-white ${
+            onClick={() => setTimeout(handleUpload, 100)}
+            className={`px-4 py-2 rounded text-white ${
               ((type === "homebanner" || type === "offer") && image) ||
-              (type === "product-type" && selectedProductIds.length > 0)
+              (type === "product-type" && selectedProductIds.length > 0) ||
+              (type === "category" && image && bannerTitle.trim())
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
