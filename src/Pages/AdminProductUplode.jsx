@@ -345,13 +345,16 @@ export default function AdminProductUpload() {
         + Add Variant
       </button>
 
-      <div className="flex content-between items-center">
-        {/*🚨 NEW: Product Type Selection */}
-        <label className="block mb-2 mt-6 font-semibold">Product Type</label>
+      {/* 🚨 NEW: Product Type & Keywords in Flex Layout */}
+      <div className="flex flex-wrap gap-8 mt-6">
+
+        {/* Product Type Section */}
+        <div className="flex flex-col">
+          <label className="block mb-2 font-semibold">Product Type</label>
           <select
             value={productType}
             onChange={(e) => setProductType(e.target.value)}
-            className="p-2 border w-[150px] "
+            className="p-2 border w-[180px] rounded"
           >
             <option value="">Select Type</option>
             {productTypes.map((type, index) => (
@@ -360,23 +363,25 @@ export default function AdminProductUpload() {
               </option>
             ))}
           </select>
+        </div>
 
-        {/* 🚨 NEW: Keywords Section */}
-        <h3 className="text-lg font-semibold mt-6 mb-2">Search Keywords</h3>
-        <div className="mb-4">
+        {/* Keywords Section */}
+        <div className="flex-1">
+          <label className="block mb-2 font-semibold">Search Keywords</label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
-              placeholder="Add keywords (e.g., masala, spice, turmeric) - separate with commas"
+              placeholder="Add keywords (e.g., masala, spice, turmeric)"
               value={keywords}
               onChange={handleKeywordsChange}
-              className="p-2 border flex-1"
+              className="p-2 border flex-1 rounded"
               onKeyPress={(e) => e.key === "Enter" && addKeyword()}
             />
             <button onClick={addKeyword} className="bg-green-500 text-white px-4 py-2 rounded">
-              Add Keywords
+              Add
             </button>
           </div>
+
           {keywordsList.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {keywordsList.map((keyword, index) => (
@@ -385,20 +390,24 @@ export default function AdminProductUpload() {
                   className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                 >
                   {keyword}
-                  <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
+                  <button
+                    onClick={() => removeKeyword(index)}
+                    className="text-red-500 hover:text-red-700 font-bold"
+                  >
                     ×
                   </button>
                 </span>
               ))}
             </div>
           )}
+
           <p className="text-sm text-gray-600 mt-2">
-            💡 <strong>Examples:</strong> For "Turmeric Powder" add keywords like: turmeric, haldi, masala, spice, powder,
-            yellow, cooking
+            💡 <strong>Examples:</strong> turmeric, haldi, masala, spice, powder, yellow, cooking
           </p>
         </div>
-      </div>
 
+      </div>
+      
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
