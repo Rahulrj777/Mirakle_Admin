@@ -345,57 +345,60 @@ export default function AdminProductUpload() {
         + Add Variant
       </button>
 
-      {/*🚨 NEW: Product Type Selection */}
-      <label className="block mb-2 mt-6 font-semibold">Product Type</label>
-        <select
-          value={productType}
-          onChange={(e) => setProductType(e.target.value)}
-          className="p-2 border w-[150px] "
-        >
-          <option value="">Select Type</option>
-          {productTypes.map((type, index) => (
-            <option key={index} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-
-      {/* 🚨 NEW: Keywords Section */}
-      <h3 className="text-lg font-semibold mt-6 mb-2">Search Keywords</h3>
-      <div className="mb-4">
-        <div className="flex gap-2 mb-2">
-          <input
-            type="text"
-            placeholder="Add keywords (e.g., masala, spice, turmeric) - separate with commas"
-            value={keywords}
-            onChange={handleKeywordsChange}
-            className="p-2 border flex-1"
-            onKeyPress={(e) => e.key === "Enter" && addKeyword()}
-          />
-          <button onClick={addKeyword} className="bg-green-500 text-white px-4 py-2 rounded">
-            Add Keywords
-          </button>
-        </div>
-        {keywordsList.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {keywordsList.map((keyword, index) => (
-              <span
-                key={index}
-                className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-              >
-                {keyword}
-                <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
-                  ×
-                </button>
-              </span>
+      <div className="flex content-between items-center">
+        {/*🚨 NEW: Product Type Selection */}
+        <label className="block mb-2 mt-6 font-semibold">Product Type</label>
+          <select
+            value={productType}
+            onChange={(e) => setProductType(e.target.value)}
+            className="p-2 border w-[150px] "
+          >
+            <option value="">Select Type</option>
+            {productTypes.map((type, index) => (
+              <option key={index} value={type}>
+                {type}
+              </option>
             ))}
+          </select>
+
+        {/* 🚨 NEW: Keywords Section */}
+        <h3 className="text-lg font-semibold mt-6 mb-2">Search Keywords</h3>
+        <div className="mb-4">
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Add keywords (e.g., masala, spice, turmeric) - separate with commas"
+              value={keywords}
+              onChange={handleKeywordsChange}
+              className="p-2 border flex-1"
+              onKeyPress={(e) => e.key === "Enter" && addKeyword()}
+            />
+            <button onClick={addKeyword} className="bg-green-500 text-white px-4 py-2 rounded">
+              Add Keywords
+            </button>
           </div>
-        )}
-        <p className="text-sm text-gray-600 mt-2">
-          💡 <strong>Examples:</strong> For "Turmeric Powder" add keywords like: turmeric, haldi, masala, spice, powder,
-          yellow, cooking
-        </p>
+          {keywordsList.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {keywordsList.map((keyword, index) => (
+                <span
+                  key={index}
+                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                >
+                  {keyword}
+                  <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-sm text-gray-600 mt-2">
+            💡 <strong>Examples:</strong> For "Turmeric Powder" add keywords like: turmeric, haldi, masala, spice, powder,
+            yellow, cooking
+          </p>
+        </div>
       </div>
+
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
