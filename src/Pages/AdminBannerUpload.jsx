@@ -139,7 +139,7 @@ const AdminBannerUpload = () => {
       formData.append("percentage", percentage);
       formData.append("image", image);
       formData.append("type", "offerbanner"); 
-      formData.append("slot", offerSlot); 
+      formData.append("slot", selectedSlot); 
 
       try {
         await axios.post(`${API_BASE}/api/offer-banners/upload`, formData);
@@ -470,13 +470,13 @@ const AdminBannerUpload = () => {
             )}
 
             <select
-              value={offerSlot}
-              onChange={(e) => setOfferSlot(e.target.value)}
+              value={selectedSlot}
+              onChange={(e) => setSelectedSlot(e.target.value)}
               className="mb-4 p-2 border rounded w-full"
             >
-              <option value="">Select Offer Slot</option>
-              <option value="left">Special Offer (Left)</option>
-              <option value="right">50% Off (Right)</option>
+              <option value="">Select Slot</option>
+              <option value="left">Left Banner (50% OFF)</option>
+              <option value="right">Right Banner (Special Offer)</option>
             </select>
 
             {image && (
