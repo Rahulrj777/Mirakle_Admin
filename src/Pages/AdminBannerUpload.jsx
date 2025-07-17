@@ -91,64 +91,52 @@ const AdminBannerUpload = () => {
       return
     }
 
-    if (type === "homebanner" || type === "offer") {
-    if (!image) {
-      alert("Please select an image");
+    if (type === "homebanner") {
+      // Send to banners/upload
+      const hash = await computeFileHash(image);
+      const formData = new FormData();
+      formData.append("type", type);
+      formData.append("image", image);
+      formData.append("hash", hash);
+
+      try {
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        alert("Banner uploaded successfully");
+        fetchBanners();
+        setImage(null);
+        const fileInput = document.getElementById("banner-file");
+        if (fileInput) fileInput.value = "";
+      } catch (err) {
+        console.error("Upload error:", err);
+        alert(err.response?.data?.message || "Upload failed");
+      }
       return;
     }
-
-    if (type === "offer" && !title.trim()) {
-      alert("Please enter a title for the offer");
-      return;
-    }
-
-    const hash = await computeFileHash(image);
-    const formData = new FormData();
-    formData.append("type", type);
-    formData.append("image", image);
-    formData.append("hash", hash);
-
-    if (type === "offer") {
-      formData.append("title", title);
-    }
-
-    try {
-      await axios.post(`${API_BASE}/api/banners/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      alert("Banner uploaded successfully");
-      fetchBanners();
-      setImage(null);
-      setTitle("");
-      const fileInput = document.getElementById("banner-file");
-      if (fileInput) fileInput.value = "";
-    } catch (err) {
-      console.error("Upload error:", err);
-      alert(err.response?.data?.message || "Upload failed");
-    }
-    return;
-  }
 
     if (type === "offerbanner") {
-      if (!image || !title) {
-        alert("Please fill in title and image")
-        return
+      // ✅ Send to /api/offer-banners/upload
+      if (!image || !title.trim()) {
+        alert("Please select an image and enter a title");
+        return;
       }
-      const formData = new FormData()
-      formData.append("image", image)
-      formData.append("title", title)
-      formData.append("percentage", percentage)
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("percentage", percentage);
+      formData.append("image", image);
+
       try {
-        const res = await axios.post(`${API_BASE}/api/offer-banners/upload`, formData)
-        alert("Offer banner uploaded")
-        setImage(null)
-        setTitle("")
-        setPercentage("")
+        await axios.post(`${API_BASE}/api/offer-banners/upload`, formData);
+        alert("Offer banner uploaded successfully");
+        setImage(null);
+        setTitle("");
+        setPercentage("");
       } catch (err) {
-        alert("Upload failed")
-        console.error(err)
+        console.error("Offer upload failed:", err);
+        alert(err.response?.data?.message || "Upload failed");
       }
-      return
+      return;
     }
 
     if (type === "category") {
@@ -291,7 +279,7 @@ const AdminBannerUpload = () => {
         <option value="all">Show All (View Only)</option>
         <option value="homebanner">Banner</option>
         <option value="category">Category</option>
-        <option value="offer">Offer Zone</option>
+        <option value="offerbanner">Offer Zone</option>
         <option value="product-type">Our Special Product's</option>
       </select>
 
