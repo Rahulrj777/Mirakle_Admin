@@ -116,11 +116,18 @@ const AdminBannerUpload = () => {
     }
 
     if (type === "offerbanner") {
-      // ✅ Send to /api/offer-banners/upload
+      // Check for max 2 banners
+      const currentOffers = banners.filter(b => b.type === "offerbanner")
+      if (currentOffers.length >= 2) {
+        alert("Only 2 Offer Banners are allowed.")
+        return;
+      }
+
       if (!image || !title.trim()) {
         alert("Please select an image and enter a title");
         return;
       }
+
       const formData = new FormData();
       formData.append("title", title);
       formData.append("percentage", percentage);
@@ -132,6 +139,7 @@ const AdminBannerUpload = () => {
         setImage(null);
         setTitle("");
         setPercentage("");
+        fetchBanners();
       } catch (err) {
         console.error("Offer upload failed:", err);
         alert(err.response?.data?.message || "Upload failed");
@@ -249,7 +257,7 @@ const AdminBannerUpload = () => {
       all: "ALL",
       homebanner: "Banner",
       category: "category",
-      offer: "Offer Zone",
+      offerbanner: "Offer Zone",
       "product-type": "Our Special Product's",
     }
     const confirmMessage =
@@ -463,7 +471,7 @@ const AdminBannerUpload = () => {
           <button
             onClick={() => setTimeout(handleUpload, 100)}
             className={`px-4 py-2 rounded text-white ${
-              ((type === "homebanner" || type === "offer") && image && (type !== "offer" || title)) ||
+              ((type === "homebanner" || type === "offerbanner") && image && (type !== "offerbanner" || title)) ||
               (type === "product-type" && selectedProductIds.length > 0) ||
               (type === "category" && image && selectedCategoryType)
                 ? "bg-green-600 hover:bg-green-700"
@@ -479,7 +487,7 @@ const AdminBannerUpload = () => {
         <h3 className="text-lg font-semibold">
           {type === "all"
             ? "All Uploaded Banners"
-            : `${type === "homebanner" ? "Main Banners" : type === "category" ? "Side Banners" : type === "offer" ? "Offer Zone" : "Product Type Banners"} (${filteredBanners.length})`}
+            : `${type === "homebanner" ? "Main Banners" : type === "category" ? "Side Banners" : type === "offerbanner" ? "Offer Zone" : "Product Type Banners"} (${filteredBanners.length})`}
         </h3>
         {filteredBanners.length > 0 && (
           <button
@@ -488,7 +496,7 @@ const AdminBannerUpload = () => {
           >
             {type === "all"
               ? "Delete All Banners"
-              : `Delete All ${type === "homebanner" ? "Main" : type === "category" ? "Side" : type === "offer" ? "Offer" : "Product Type"} Banners`}
+              : `Delete All ${type === "homebanner" ? "Main" : type === "category" ? "Side" : type === "offerbanner" ? "offerbanner" : "Product Type"} Banners`}
           </button>
         )}
       </div>
