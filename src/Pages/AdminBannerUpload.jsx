@@ -242,7 +242,12 @@ const AdminBannerUpload = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this banner?")) {
       try {
-        const response = await axios.delete(`${API_BASE}/api/banners/delete/${id}`)
+        const url = type === "offerbanner"
+          ? `${API_BASE}/api/offer-banners/${id}`  // Use offer-banner delete route
+          : `${API_BASE}/api/banners/${id}`         // Use generic banner delete route
+
+        const response = await axios.delete(url)
+
         if (response.status === 200) {
           alert("Banner deleted successfully")
           fetchBanners()
@@ -252,32 +257,29 @@ const AdminBannerUpload = () => {
         }
       } catch (err) {
         console.error("Delete error:", err)
-        alert("Failed to delete banner")
+        alert(err.response?.data?.message || "Failed to delete banner")
       }
     }
   }
 
   const handleDeleteAll = async () => {
-    const currentType = type === "all" ? "all" : type
-    const typeNames = {
-      all: "ALL",
-      homebanner: "Banner",
-      category: "category",
-      offerbanner: "Offer Zone",
-      "product-type": "Our Special Product's",
-    }
-    const confirmMessage =
-      currentType === "all"
-        ? "Are you sure you want to delete ALL banners?"
-        : `Delete all ${typeNames[currentType]} banners?`
-    if (confirm(confirmMessage)) {
+    const confirmMessage = type === "all"
+      ? "Are you sure you want to delete ALL banners?"
+      : `Delete all ${type === "homebanner" ? "Home Banners" : type === "category" ? "Category Banners" : type === "offerbanner" ? "Offer Banners" : "Product Type Banners"}?`
+
+    if (window.confirm(confirmMessage)) {
       try {
-        const url = currentType === "all" ? `${API_BASE}/api/banners` : `${API_BASE}/api/banners?type=${currentType}`
+        const url = type === "offerbanner"
+          ? `${API_BASE}/api/offer-banners`  // Offer banners delete all
+          : `${API_BASE}/api/banners${type !== "all" ? `?type=${type}` : ""}` // For other types or all
+
         const response = await axios.delete(url)
-        fetchBanners()
+
         alert(response.data.message || "Banners deleted successfully")
+        fetchBanners()
       } catch (err) {
-        alert("Failed to delete banners")
+        console.error("Delete all error:", err)
+        alert(err.response?.data?.message || "Failed to delete banners")
       }
     }
   }
