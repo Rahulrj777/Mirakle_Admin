@@ -137,6 +137,7 @@ const AdminBannerUpload = () => {
       formData.append("title", title);
       formData.append("percentage", percentage);
       formData.append("image", image);
+      formData.append("type", "offerbanner"); 
 
       try {
         await axios.post(`${API_BASE}/api/offer-banners/upload`, formData);
