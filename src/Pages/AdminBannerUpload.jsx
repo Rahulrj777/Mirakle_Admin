@@ -17,6 +17,7 @@ const AdminBannerUpload = () => {
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [title, setTitle] = useState("")
   const [percentage, setPercentage] = useState("")
+  const [offerSlot, setOfferSlot] = useState("")
 
   useEffect(() => {
     fetchBanners()
@@ -128,8 +129,8 @@ const AdminBannerUpload = () => {
         return;
       }
 
-      if (!image || !title.trim()) {
-        alert("Please select an image and enter a title");
+      if (!image || !title.trim() || !offerSlot) {
+        alert("Please select image, title, and offer slot");
         return;
       }
 
@@ -138,6 +139,7 @@ const AdminBannerUpload = () => {
       formData.append("percentage", percentage);
       formData.append("image", image);
       formData.append("type", "offerbanner"); 
+      formData.append("slot", offerSlot); 
 
       try {
         await axios.post(`${API_BASE}/api/offer-banners/upload`, formData);
@@ -466,6 +468,16 @@ const AdminBannerUpload = () => {
                 className="mb-4 p-2 border rounded w-full"
               />
             )}
+
+            <select
+              value={offerSlot}
+              onChange={(e) => setOfferSlot(e.target.value)}
+              className="mb-4 p-2 border rounded w-full"
+            >
+              <option value="">Select Offer Slot</option>
+              <option value="left">Special Offer (Left)</option>
+              <option value="right">50% Off (Right)</option>
+            </select>
 
             {image && (
               <img
