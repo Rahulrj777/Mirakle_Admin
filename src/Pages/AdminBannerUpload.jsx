@@ -21,13 +21,19 @@ const AdminBannerUpload = () => {
   useEffect(() => {
     fetchBanners()
     fetchProducts()
-  }, [])
+  }, [type])
 
   const fetchBanners = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/banners`)
-      console.log("Fetched Banners:", res.data)
-      setBanners(res.data)
+      if (type === "offerbanner") {
+        const res = await axios.get(`${API_BASE}/api/offer-banners`)
+        console.log("Fetched Offer Banners:", res.data)
+        setBanners(res.data)
+      } else {
+        const res = await axios.get(`${API_BASE}/api/banners`)
+        console.log("Fetched Banners:", res.data)
+        setBanners(res.data)
+      }
     } catch (err) {
       console.error("Failed to fetch banners:", err)
     }
@@ -37,7 +43,6 @@ const AdminBannerUpload = () => {
     try {
       const res = await axios.get(`${API_BASE}/api/products/all-products`)
       setProducts(res.data)
-      // Extract unique product types from fetched products
       const uniqueTypes = [...new Set(res.data.map((p) => p.productType).filter(Boolean))].sort()
       setAvailableProductTypes(uniqueTypes)
     } catch (err) {
