@@ -430,35 +430,35 @@ const AdminBannerUpload = () => {
             </>
           )}
 
-          {(type === "homebanner" || type === "offer") && (
-            <>
+          {(type === "homebanner" || type === "offerbanner") && (
+          <>
+            <input
+              id="banner-file"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="mb-4"
+            />
+
+            {type === "offerbanner" && (
               <input
-                id="banner-file"
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="mb-4"
+                type="text"
+                placeholder="Enter Offer Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mb-4 p-2 border rounded w-full"
               />
+            )}
 
-              {type === "offer" && (
-                <input
-                  type="text"
-                  placeholder="Enter Offer Title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="mb-4 p-2 border rounded w-full"
-                />
-              )}
-
-              {image && (
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt="Preview"
-                  className="mb-4 w-full h-64 object-cover rounded border"
-                />
-              )}
-            </>
-          )}
+            {image && (
+              <img
+                src={URL.createObjectURL(image)}
+                alt="Preview"
+                className="mb-4 w-full h-64 object-cover rounded border"
+              />
+            )}
+          </>
+        )}
 
           <button
             onClick={() => setTimeout(handleUpload, 100)}
