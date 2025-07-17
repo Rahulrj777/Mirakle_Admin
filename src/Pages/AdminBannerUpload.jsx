@@ -12,16 +12,15 @@ const AdminBannerUpload = () => {
   const [products, setProducts] = useState([])
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
-  const [productSearchTerm, setSearchTerm] = useState("")
+  const [productSearchTerm, setProductSearchTerm] = useState("")
   // ✅ Use a state for selected category type, instead of bannerTitle for category
   const [selectedCategoryType, setSelectedCategoryType] = useState("")
-  // ✅ Hardcoded product types for now, as per user request
-  const [availableProductTypes] = useState(["Oil", "Seasonings", "Sauce"])
+  // ✅ Dynamically populated from existing products
+  const [availableProductTypes, setAvailableProductTypes] = useState([])
 
   useEffect(() => {
     fetchBanners()
     fetchProducts()
-    // No need to fetch product types from backend anymore
   }, [])
 
   const fetchBanners = async () => {
@@ -38,6 +37,9 @@ const AdminBannerUpload = () => {
     try {
       const res = await axios.get(`${API_BASE}/api/products/all-products`)
       setProducts(res.data)
+      // Extract unique product types from fetched products
+      const uniqueTypes = [...new Set(res.data.map((p) => p.productType).filter(Boolean))].sort()
+      setAvailableProductTypes(uniqueTypes)
     } catch (err) {
       console.error("Failed to fetch products:", err)
     }
@@ -269,7 +271,7 @@ const AdminBannerUpload = () => {
                 type="text"
                 placeholder="Search products..."
                 value={productSearchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => setProductSearchTerm(e.target.value)}
                 className="mb-2 p-2 border w-full rounded"
               />
               <div className="mb-3">

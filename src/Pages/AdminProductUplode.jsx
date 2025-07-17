@@ -21,24 +21,21 @@ export default function AdminProductUpload() {
   const [keywordsList, setKeywordsList] = useState([])
   // ✅ productType will now store the string name of the selected type
   const [productType, setProductType] = useState("")
-  // ✅ Hardcoded product types for local management
-  const [availableProductTypes, setAvailableProductTypes] = useState([
-    "Oil",
-    "Seasonings",
-    "Sauce"
-  ])
+  // ✅ Dynamically populated from existing products
+  const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
 
   useEffect(() => {
     fetchProducts()
-    // No need to fetch product types from backend anymore
   }, [])
 
   const fetchProducts = async () => {
     try {
-      // No populate needed as productType is a string
       const res = await axios.get(`${API_BASE}/api/products/all-products`)
       setProducts(res.data)
+      // Extract unique product types from fetched products
+      const uniqueTypes = [...new Set(res.data.map((p) => p.productType).filter(Boolean))].sort()
+      setAvailableProductTypes(uniqueTypes)
     } catch (err) {
       console.error("Fetch products error:", err)
     }
@@ -149,13 +146,14 @@ export default function AdminProductUpload() {
     setKeywordsList(copy)
   }
 
-  // ✅ Updated: Add product type locally
+  // ✅ Updated: Add product type locally and set it as selected
   const handleAddProductType = () => {
     const newType = newProductTypeInput.trim()
     if (newType && !availableProductTypes.includes(newType)) {
-      setAvailableProductTypes((prev) => [...prev, newType])
+      setAvailableProductTypes((prev) => [...prev, newType].sort())
+      setProductType(newType) // Automatically select the newly added type
       setNewProductTypeInput("")
-      alert(`Product type "${newType}" added locally!`)
+      alert(`Product type "${newType}" added to dropdown. Save a product to persist it.`)
     } else if (newType && availableProductTypes.includes(newType)) {
       alert(`Product type "${newType}" already exists.`)
     }
@@ -242,7 +240,7 @@ export default function AdminProductUpload() {
         console.log("🟢 Uploaded:", res.data)
       }
       resetForm()
-      fetchProducts()
+      fetchProducts() // Re-fetch products to update the available product types list
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
       alert(err.response?.data?.message || "Operation failed")
@@ -287,7 +285,7 @@ export default function AdminProductUpload() {
         headers: { Authorization: `Bearer ${token}` },
       })
       alert("Product deleted successfully")
-      fetchProducts()
+      fetchProducts() // Re-fetch products to update the available product types list
     } catch (err) {
       console.error("Delete failed:", err.response?.data || err.message)
       alert(err.response?.data?.message || "Delete failed")
@@ -396,7 +394,7 @@ export default function AdminProductUpload() {
               </option>
             ))}
           </select>
-          {/* ✅ New: Add Product Type Input */}
+          {/* ✅ New: Add Product Type Input (local management) */}
           <div className="mt-4 flex gap-2">
             <input
               type="text"
@@ -410,6 +408,7 @@ export default function AdminProductUpload() {
               Add Type
             </button>
           </div>
+          {/* ❌ Removed: Delete Product Type functionality as it's not persisted separately */}
         </div>
 
         {/* Keywords Section */}
