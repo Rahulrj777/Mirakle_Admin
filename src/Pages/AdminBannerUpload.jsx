@@ -13,9 +13,7 @@ const AdminBannerUpload = () => {
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
-  // ✅ Use a state for selected category type, instead of bannerTitle for category
   const [selectedCategoryType, setSelectedCategoryType] = useState("")
-  // ✅ Dynamically populated from existing products
   const [availableProductTypes, setAvailableProductTypes] = useState([])
 
   useEffect(() => {
@@ -129,14 +127,14 @@ const AdminBannerUpload = () => {
       formData.append("type", "category")
       formData.append("image", image)
       formData.append("hash", hash)
-      formData.append("title", selectedCategoryType) // ✅ Use selectedCategoryType as title
+      formData.append("title", selectedCategoryType)
       try {
         await axios.post(`${API_BASE}/api/banners/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         })
         alert("Category banner uploaded successfully.")
         setImage(null)
-        setSelectedCategoryType("") // Reset selected category type
+        setSelectedCategoryType("")
         fetchBanners()
         const fileInput = document.getElementById("banner-file")
         if (fileInput) fileInput.value = ""
@@ -176,6 +174,7 @@ const AdminBannerUpload = () => {
         formData.append("price", price.toFixed(2))
         formData.append("oldPrice", oldPrice.toFixed(2))
         formData.append("discountPercent", discount.toString())
+        formData.append("productType", productType)
         const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
         if (sizeMatch) {
           formData.append("weightValue", sizeMatch[1])
@@ -227,7 +226,7 @@ const AdminBannerUpload = () => {
     const typeNames = {
       all: "ALL",
       homebanner: "Banner",
-      category: "Top Selling Product's",
+      category: "category",
       offer: "Offer Zone",
       "product-type": "Our Special Product's",
     }
@@ -257,7 +256,7 @@ const AdminBannerUpload = () => {
       <select value={type} onChange={(e) => setType(e.target.value)} className="border p-2 w-full mb-4">
         <option value="all">Show All (View Only)</option>
         <option value="homebanner">Banner</option>
-        <option value="category">Top Selling Product's</option>
+        <option value="category">Category</option>
         <option value="offer">Offer Zone</option>
         <option value="product-type">Our Special Product's</option>
       </select>
