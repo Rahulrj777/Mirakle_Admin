@@ -25,10 +25,7 @@ export default function AdminProductUpload() {
   const [availableProductTypes, setAvailableProductTypes] = useState([
     "Oil",
     "Seasonings",
-    "Sauce",
-    "Beverages",
-    "Snacks",
-    "Others",
+    "Sauce"
   ])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
 

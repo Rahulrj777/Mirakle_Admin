@@ -16,7 +16,7 @@ const AdminBannerUpload = () => {
   // ✅ Use a state for selected category type, instead of bannerTitle for category
   const [selectedCategoryType, setSelectedCategoryType] = useState("")
   // ✅ Hardcoded product types for now, as per user request
-  const [availableProductTypes] = useState(["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"])
+  const [availableProductTypes] = useState(["Oil", "Seasonings", "Sauce"])
 
   useEffect(() => {
     fetchBanners()
