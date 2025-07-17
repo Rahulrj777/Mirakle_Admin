@@ -139,7 +139,7 @@ const AdminBannerUpload = () => {
       formData.append("percentage", percentage);
       formData.append("image", image);
       formData.append("type", "offerbanner"); 
-      formData.append("slot", selectedSlot); 
+      formData.append("slot", offerSlot);
 
       try {
         await axios.post(`${API_BASE}/api/offer-banners/upload`, formData);
@@ -203,7 +203,7 @@ const AdminBannerUpload = () => {
         if (!productImageUrl) continue
         const discount = Number.parseFloat(variant.discountPercent) || 0
         const oldPrice = Number.parseFloat(variant.price) || 0
-        const price = discount > 0 ? oldPrice * (1 - discount / 100) : oldPrice
+        const price = oldPrice - (oldPrice * discount / 100)
         const formData = new FormData()
         formData.append("type", type)
         formData.append("productId", productId)
@@ -212,7 +212,7 @@ const AdminBannerUpload = () => {
         formData.append("price", price.toFixed(2))
         formData.append("oldPrice", oldPrice.toFixed(2))
         formData.append("discountPercent", discount.toString())
-        formData.append("productType", productType)
+        formData.append("productType", product.productType)
         const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
         if (sizeMatch) {
           formData.append("weightValue", sizeMatch[1])
@@ -438,7 +438,7 @@ const AdminBannerUpload = () => {
                   ))}
                 </select>
               </div>
-              <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
+              <input id={`banner-file-${type}`} type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
               {image && (
                 <img
                   src={URL.createObjectURL(image) || "/placeholder.svg"}
@@ -470,8 +470,8 @@ const AdminBannerUpload = () => {
             )}
 
             <select
-              value={selectedSlot}
-              onChange={(e) => setSelectedSlot(e.target.value)}
+              value={offerSlot}
+              onChange={(e) => setOfferSlot(e.target.value)}
               className="mb-4 p-2 border rounded w-full"
             >
               <option value="">Select Slot</option>
