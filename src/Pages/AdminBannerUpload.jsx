@@ -283,7 +283,8 @@ const AdminBannerUpload = () => {
 
   const selectedProduct = getSelectedProduct()
   const selectedVariant = getSelectedVariant()
-  const filteredBanners = banners.filter((b) => type === "all" || b.type === type)
+  const filteredBanners =
+    type === "offerbanner" ? banners : banners.filter((b) => type === "all" || b.type === type)
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
