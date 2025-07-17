@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -17,21 +19,31 @@ export default function AdminProductUpload() {
   const [description, setDescription] = useState("")
   const [keywords, setKeywords] = useState("")
   const [keywordsList, setKeywordsList] = useState([])
+  // ✅ productType will now store the string name of the selected type
   const [productType, setProductType] = useState("")
-  // ✅ Allow product types to be dynamically added
-  const [productTypes, setProductTypes] = useState(["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"])
-  const [newProductTypeInput, setNewProductTypeInput] = useState("") // State for new type input
+  // ✅ Hardcoded product types for local management
+  const [availableProductTypes, setAvailableProductTypes] = useState([
+    "Oil",
+    "Seasonings",
+    "Sauce",
+    "Beverages",
+    "Snacks",
+    "Others",
+  ])
+  const [newProductTypeInput, setNewProductTypeInput] = useState("")
 
   useEffect(() => {
     fetchProducts()
+    // No need to fetch product types from backend anymore
   }, [])
 
   const fetchProducts = async () => {
     try {
+      // No populate needed as productType is a string
       const res = await axios.get(`${API_BASE}/api/products/all-products`)
       setProducts(res.data)
     } catch (err) {
-      console.error("Fetch error:", err)
+      console.error("Fetch products error:", err)
     }
   }
 
@@ -46,7 +58,7 @@ export default function AdminProductUpload() {
     setDescription("")
     setKeywords("")
     setKeywordsList([])
-    setProductType("") // Reset product type
+    setProductType("") // Reset product type selection
     const fileInput = document.getElementById("product-images")
     if (fileInput) fileInput.value = ""
   }
@@ -140,15 +152,14 @@ export default function AdminProductUpload() {
     setKeywordsList(copy)
   }
 
-  // ✅ New function to add a product type
+  // ✅ Updated: Add product type locally
   const handleAddProductType = () => {
     const newType = newProductTypeInput.trim()
-    if (newType && !productTypes.includes(newType)) {
-      setProductTypes((prev) => [...prev, newType])
+    if (newType && !availableProductTypes.includes(newType)) {
+      setAvailableProductTypes((prev) => [...prev, newType])
       setNewProductTypeInput("")
-      alert(`Product type "${newType}" added!`)
-      // In a real app, you'd send this to your backend to persist
-    } else if (newType && productTypes.includes(newType)) {
+      alert(`Product type "${newType}" added locally!`)
+    } else if (newType && availableProductTypes.includes(newType)) {
       alert(`Product type "${newType}" already exists.`)
     }
   }
@@ -185,14 +196,14 @@ export default function AdminProductUpload() {
     formData.append("description", description)
     formData.append("details", JSON.stringify(detailsObject))
     formData.append("keywords", JSON.stringify(keywordsList))
-    formData.append("productType", productType) // ✅ Append productType
+    formData.append("productType", productType) // ✅ Append productType string
     images.forEach((img) => formData.append("images", img))
 
     const token = localStorage.getItem("authToken")
 
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)
-    console.log("Product Type:", productType) // Log product type
+    console.log("Product Type:", productType) // Log product type string
     console.log("Variants:", preparedVariants)
     console.log("Description:", description)
     console.log("Details:", detailsObject)
@@ -244,7 +255,8 @@ export default function AdminProductUpload() {
   const handleEdit = (product) => {
     setEditingProduct(product)
     setName(product.title)
-    setProductType(product.productType || "") // ✅ Load product type
+    // ✅ Set productType to the string name
+    setProductType(product.productType || "")
     const parsedVariants = product.variants
       .map((v) => {
         const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
@@ -261,9 +273,9 @@ export default function AdminProductUpload() {
       })
       .filter(Boolean)
     setVariants(parsedVariants)
-    setImages([]) // Clear new images when editing
+    setImages([])
     setExistingImages(product.images?.others || [])
-    setRemovedImages([]) // Reset removed images for new edit session
+    setRemovedImages([])
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
     setDescription(product.description || "")
     setKeywordsList(product.keywords || [])
@@ -381,9 +393,9 @@ export default function AdminProductUpload() {
             className="p-2 border w-[180px] rounded"
           >
             <option value="">Select Type</option>
-            {productTypes.map((type, index) => (
-              <option key={index} value={type}>
-                {type}
+            {availableProductTypes.map((typeOption, index) => (
+              <option key={index} value={typeOption}>
+                {typeOption}
               </option>
             ))}
           </select>
@@ -544,7 +556,7 @@ export default function AdminProductUpload() {
                 className="w-full h-40 object-cover mb-2 rounded"
               />
               <h3 className="text-lg font-bold">{product.title}</h3>
-              {/* ✅ NEW: Display Product Type */}
+              {/* ✅ Display Product Type Name (string) */}
               {product.productType && (
                 <p className="text-sm text-gray-700 mb-1">
                   <span className="font-semibold">Type:</span> {product.productType}

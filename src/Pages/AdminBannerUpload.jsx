@@ -12,15 +12,16 @@ const AdminBannerUpload = () => {
   const [products, setProducts] = useState([])
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
-  const [productSearchTerm, setProductSearchTerm] = useState("")
+  const [productSearchTerm, setSearchTerm] = useState("")
   // ✅ Use a state for selected category type, instead of bannerTitle for category
   const [selectedCategoryType, setSelectedCategoryType] = useState("")
-  // ✅ Hardcode product types for now, ideally fetch from backend
-  const productTypes = ["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"]
+  // ✅ Hardcoded product types for now, as per user request
+  const [availableProductTypes] = useState(["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"])
 
   useEffect(() => {
     fetchBanners()
     fetchProducts()
+    // No need to fetch product types from backend anymore
   }, [])
 
   const fetchBanners = async () => {
@@ -204,7 +205,7 @@ const AdminBannerUpload = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this banner?")) {
       try {
-        const response = await axios.delete(`${API_BASE}/api/banners/delete/${id}`) // Corrected endpoint
+        const response = await axios.delete(`${API_BASE}/api/banners/delete/${id}`)
         if (response.status === 200) {
           alert("Banner deleted successfully")
           fetchBanners()
@@ -268,7 +269,7 @@ const AdminBannerUpload = () => {
                 type="text"
                 placeholder="Search products..."
                 value={productSearchTerm}
-                onChange={(e) => setProductSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="mb-2 p-2 border w-full rounded"
               />
               <div className="mb-3">
@@ -388,7 +389,7 @@ const AdminBannerUpload = () => {
                   className="p-2 border w-full rounded"
                 >
                   <option value="">Select a product category</option>
-                  {productTypes.map((typeOption, index) => (
+                  {availableProductTypes.map((typeOption, index) => (
                     <option key={index} value={typeOption}>
                       {typeOption}
                     </option>
@@ -424,7 +425,7 @@ const AdminBannerUpload = () => {
             className={`px-4 py-2 rounded text-white ${
               ((type === "homebanner" || type === "offer") && image) ||
               (type === "product-type" && selectedProductIds.length > 0) ||
-              (type === "category" && image && selectedCategoryType) // ✅ Check for selectedCategoryType
+              (type === "category" && image && selectedCategoryType)
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
