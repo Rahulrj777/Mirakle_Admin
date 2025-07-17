@@ -15,6 +15,8 @@ const AdminBannerUpload = () => {
   const [productSearchTerm, setProductSearchTerm] = useState("")
   const [selectedCategoryType, setSelectedCategoryType] = useState("")
   const [availableProductTypes, setAvailableProductTypes] = useState([])
+  const [title, setTitle] = useState("")
+  const [percentage, setPercentage] = useState("")
 
   useEffect(() => {
     fetchBanners()
@@ -89,34 +91,66 @@ const AdminBannerUpload = () => {
       return
     }
 
-    // Handle 'homebanner' and 'offer' types (image upload only)
     if (type === "homebanner" || type === "offer") {
-      if (!image) {
-        alert("Please select an image")
+    if (!image) {
+      alert("Please select an image");
+      return;
+    }
+
+    if (type === "offer" && !title.trim()) {
+      alert("Please enter a title for the offer");
+      return;
+    }
+
+    const hash = await computeFileHash(image);
+    const formData = new FormData();
+    formData.append("type", type);
+    formData.append("image", image);
+    formData.append("hash", hash);
+
+    if (type === "offer") {
+      formData.append("title", title);
+    }
+
+    try {
+      await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      alert("Banner uploaded successfully");
+      fetchBanners();
+      setImage(null);
+      setTitle("");
+      const fileInput = document.getElementById("banner-file");
+      if (fileInput) fileInput.value = "";
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(err.response?.data?.message || "Upload failed");
+    }
+    return;
+  }
+
+    if (type === "offerbanner") {
+      if (!image || !title) {
+        alert("Please fill in title and image")
         return
       }
-      const hash = await computeFileHash(image)
       const formData = new FormData()
-      formData.append("type", type)
       formData.append("image", image)
-      formData.append("hash", hash)
+      formData.append("title", title)
+      formData.append("percentage", percentage)
       try {
-        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        })
-        alert("Banner uploaded successfully")
-        fetchBanners()
+        const res = await axios.post(`${API_BASE}/api/offer-banners/upload`, formData)
+        alert("Offer banner uploaded")
         setImage(null)
-        const fileInput = document.getElementById("banner-file")
-        if (fileInput) fileInput.value = ""
+        setTitle("")
+        setPercentage("")
       } catch (err) {
-        console.error("Upload error:", err)
-        alert(err.response?.data?.message || "Upload failed")
+        alert("Upload failed")
+        console.error(err)
       }
       return
     }
 
-    // ✅ Handle 'category' type (image + selected product type as title)
     if (type === "category") {
       if (!image || !selectedCategoryType) {
         alert("Please select an image and a category type.")
@@ -410,10 +444,27 @@ const AdminBannerUpload = () => {
 
           {(type === "homebanner" || type === "offer") && (
             <>
-              <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
+              <input
+                id="banner-file"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="mb-4"
+              />
+
+              {type === "offer" && (
+                <input
+                  type="text"
+                  placeholder="Enter Offer Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="mb-4 p-2 border rounded w-full"
+                />
+              )}
+
               {image && (
                 <img
-                  src={URL.createObjectURL(image) || "/placeholder.svg"}
+                  src={URL.createObjectURL(image)}
                   alt="Preview"
                   className="mb-4 w-full h-64 object-cover rounded border"
                 />
@@ -424,7 +475,7 @@ const AdminBannerUpload = () => {
           <button
             onClick={() => setTimeout(handleUpload, 100)}
             className={`px-4 py-2 rounded text-white ${
-              ((type === "homebanner" || type === "offer") && image) ||
+              ((type === "homebanner" || type === "offer") && image && (type !== "offer" || title)) ||
               (type === "product-type" && selectedProductIds.length > 0) ||
               (type === "category" && image && selectedCategoryType)
                 ? "bg-green-600 hover:bg-green-700"
