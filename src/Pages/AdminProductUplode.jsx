@@ -9,7 +9,7 @@ export default function AdminProductUpload() {
   ])
   const [images, setImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
-  const [removedImages, setRemovedImages] = useState([]) 
+  const [removedImages, setRemovedImages] = useState([])
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -18,8 +18,9 @@ export default function AdminProductUpload() {
   const [keywords, setKeywords] = useState("")
   const [keywordsList, setKeywordsList] = useState([])
   const [productType, setProductType] = useState("")
-
-  const productTypes = ["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"]
+  // ✅ Allow product types to be dynamically added
+  const [productTypes, setProductTypes] = useState(["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"])
+  const [newProductTypeInput, setNewProductTypeInput] = useState("") // State for new type input
 
   useEffect(() => {
     fetchProducts()
@@ -45,6 +46,7 @@ export default function AdminProductUpload() {
     setDescription("")
     setKeywords("")
     setKeywordsList([])
+    setProductType("") // Reset product type
     const fileInput = document.getElementById("product-images")
     if (fileInput) fileInput.value = ""
   }
@@ -138,11 +140,28 @@ export default function AdminProductUpload() {
     setKeywordsList(copy)
   }
 
+  // ✅ New function to add a product type
+  const handleAddProductType = () => {
+    const newType = newProductTypeInput.trim()
+    if (newType && !productTypes.includes(newType)) {
+      setProductTypes((prev) => [...prev, newType])
+      setNewProductTypeInput("")
+      alert(`Product type "${newType}" added!`)
+      // In a real app, you'd send this to your backend to persist
+    } else if (newType && productTypes.includes(newType)) {
+      alert(`Product type "${newType}" already exists.`)
+    }
+  }
+
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
       console.warn("❌ Validation failed", { name, variants })
+      return
+    }
+    if (!productType) {
+      alert("Please select a product type.")
       return
     }
 
@@ -161,29 +180,29 @@ export default function AdminProductUpload() {
     })
 
     const formData = new FormData()
-    formData.append("name", name) // Backend expects 'name' for title
+    formData.append("name", name)
     formData.append("variants", JSON.stringify(preparedVariants))
     formData.append("description", description)
     formData.append("details", JSON.stringify(detailsObject))
     formData.append("keywords", JSON.stringify(keywordsList))
-    formData.append("productType", productType)
+    formData.append("productType", productType) // ✅ Append productType
+    images.forEach((img) => formData.append("images", img))
 
-
-    images.forEach((img) => formData.append("images", img)) // Append new images
-
-    const token = localStorage.getItem("authToken") // or sessionStorage.getItem("authToken");
+    const token = localStorage.getItem("authToken")
 
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)
+    console.log("Product Type:", productType) // Log product type
     console.log("Variants:", preparedVariants)
     console.log("Description:", description)
     console.log("Details:", detailsObject)
     console.log("Keywords:", keywordsList)
     console.log("New Images Count:", images.length)
     console.log("Existing Images to Remove Count:", removedImages.length)
+
     if (editingProduct) {
       console.log("Editing Product ID:", editingProduct._id)
-      formData.append("removedImages", JSON.stringify(removedImages)) // Send removed images for update
+      formData.append("removedImages", JSON.stringify(removedImages))
     }
     console.log("Token:", token ? "Present" : "Missing")
     console.log("-----------------------------")
@@ -196,36 +215,26 @@ export default function AdminProductUpload() {
     try {
       let res
       if (editingProduct) {
-        // Update existing product
-        res = await axios.put(
-          `${API_BASE}/api/products/${editingProduct._id}`, // Corrected endpoint for update
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`,
-            },
+        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
           },
-        )
+        })
         alert("✅ Product updated")
         console.log("🟢 Updated:", res.data)
       } else {
-        // Upload new product
-        res = await axios.post(
-          `${API_BASE}/api/products/upload-product`, // Corrected endpoint for new product
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${token}`,
-            },
+        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
           },
-        )
+        })
         alert("✅ Product uploaded")
         console.log("🟢 Uploaded:", res.data)
       }
       resetForm()
-      fetchProducts() // Refresh product list after operation
+      fetchProducts()
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
       alert(err.response?.data?.message || "Operation failed")
@@ -235,6 +244,7 @@ export default function AdminProductUpload() {
   const handleEdit = (product) => {
     setEditingProduct(product)
     setName(product.title)
+    setProductType(product.productType || "") // ✅ Load product type
     const parsedVariants = product.variants
       .map((v) => {
         const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
@@ -251,30 +261,46 @@ export default function AdminProductUpload() {
       })
       .filter(Boolean)
     setVariants(parsedVariants)
+    setImages([]) // Clear new images when editing
     setExistingImages(product.images?.others || [])
+    setRemovedImages([]) // Reset removed images for new edit session
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
     setDescription(product.description || "")
-    setKeywordsList(product.keywords || []) // Load existing keywords
+    setKeywordsList(product.keywords || [])
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return
     try {
-      await axios.delete(`${API_BASE}/api/products/${id}`)
+      const token = localStorage.getItem("authToken")
+      await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      alert("Product deleted successfully")
       fetchProducts()
     } catch (err) {
-      alert("Delete failed")
+      console.error("Delete failed:", err.response?.data || err.message)
+      alert(err.response?.data?.message || "Delete failed")
     }
   }
 
   const toggleStock = async (id, currentStatus) => {
     try {
-      await axios.put(`${API_BASE}/api/products/${id}/toggle-stock`, {
-        isOutOfStock: !currentStatus,
-      })
+      const token = localStorage.getItem("authToken")
+      await axios.put(
+        `${API_BASE}/api/products/toggle-stock/${id}`,
+        {
+          isOutOfStock: !currentStatus,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
       fetchProducts()
     } catch (err) {
-      alert("Stock update failed")
+      console.error("Stock update failed:", err.response?.data || err.message)
+      alert(err.response?.data?.message || "Stock update failed")
     }
   }
 
@@ -345,9 +371,7 @@ export default function AdminProductUpload() {
         + Add Variant
       </button>
 
-      {/* 🚨 NEW: Product Type & Keywords in Flex Layout */}
       <div className="flex flex-wrap gap-8 mt-6">
-
         {/* Product Type Section */}
         <div className="flex flex-col">
           <label className="block mb-2 font-semibold">Product Type</label>
@@ -363,6 +387,20 @@ export default function AdminProductUpload() {
               </option>
             ))}
           </select>
+          {/* ✅ New: Add Product Type Input */}
+          <div className="mt-4 flex gap-2">
+            <input
+              type="text"
+              placeholder="Add new type"
+              value={newProductTypeInput}
+              onChange={(e) => setNewProductTypeInput(e.target.value)}
+              className="p-2 border rounded flex-1"
+              onKeyPress={(e) => e.key === "Enter" && handleAddProductType()}
+            />
+            <button onClick={handleAddProductType} className="bg-purple-600 text-white px-4 py-2 rounded">
+              Add Type
+            </button>
+          </div>
         </div>
 
         {/* Keywords Section */}
@@ -381,7 +419,6 @@ export default function AdminProductUpload() {
               Add
             </button>
           </div>
-
           {keywordsList.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {keywordsList.map((keyword, index) => (
@@ -390,24 +427,19 @@ export default function AdminProductUpload() {
                   className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
                 >
                   {keyword}
-                  <button
-                    onClick={() => removeKeyword(index)}
-                    className="text-red-500 hover:text-red-700 font-bold"
-                  >
+                  <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
                     ×
                   </button>
                 </span>
               ))}
             </div>
           )}
-
           <p className="text-sm text-gray-600 mt-2">
             💡 <strong>Examples:</strong> turmeric, haldi, masala, spice, powder, yellow, cooking
           </p>
         </div>
-
       </div>
-      
+
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
@@ -488,6 +520,7 @@ export default function AdminProductUpload() {
           Cancel
         </button>
       )}
+
       <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
       <input
         type="text"
@@ -505,13 +538,18 @@ export default function AdminProductUpload() {
                 src={
                   product?.images?.others?.[0]
                     ? `${API_BASE}${product.images.others[0]}`
-                    : "/placeholder.svg?height=150&width=150" // Using v0 placeholder
+                    : "/placeholder.svg?height=150&width=150"
                 }
                 alt={product.title}
                 className="w-full h-40 object-cover mb-2 rounded"
               />
               <h3 className="text-lg font-bold">{product.title}</h3>
-              {/* 🚨 NEW: Display keywords */}
+              {/* ✅ NEW: Display Product Type */}
+              {product.productType && (
+                <p className="text-sm text-gray-700 mb-1">
+                  <span className="font-semibold">Type:</span> {product.productType}
+                </p>
+              )}
               {product.keywords && product.keywords.length > 0 && (
                 <div className="mb-2">
                   <p className="text-xs text-gray-600 mb-1">Keywords:</p>

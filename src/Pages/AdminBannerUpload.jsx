@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
 import SparkMD5 from "spark-md5"
@@ -8,10 +10,13 @@ const AdminBannerUpload = () => {
   const [type, setType] = useState("homebanner")
   const [banners, setBanners] = useState([])
   const [products, setProducts] = useState([])
-  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
-  const [bannerTitle, setBannerTitle] = useState("");
+  // ✅ Use a state for selected category type, instead of bannerTitle for category
+  const [selectedCategoryType, setSelectedCategoryType] = useState("")
+  // ✅ Hardcode product types for now, ideally fetch from backend
+  const productTypes = ["Oil", "Seasonings", "Sauce", "Beverages", "Snacks", "Others"]
 
   useEffect(() => {
     fetchBanners()
@@ -70,8 +75,8 @@ const AdminBannerUpload = () => {
     setImage(file)
   }
 
-  const getSelectedProduct = () => products.find((p) => p._id === selectedProductIds[0]) || null;
-  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex] || null;
+  const getSelectedProduct = () => products.find((p) => p._id === selectedProductIds[0]) || null
+  const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex] || null
 
   const filteredProducts = products.filter((product) =>
     product.title.toLowerCase().includes(productSearchTerm.toLowerCase()),
@@ -79,155 +84,140 @@ const AdminBannerUpload = () => {
 
   const handleUpload = async () => {
     if (type === "all") {
-      alert("Cannot upload when 'Show All' is selected");
-      return;
+      alert("Cannot upload when 'Show All' is selected")
+      return
     }
 
-    // Handle 'main' and 'offer' types (image upload only)
+    // Handle 'homebanner' and 'offer' types (image upload only)
     if (type === "homebanner" || type === "offer") {
       if (!image) {
-        alert("Please select an image");
-        return;
+        alert("Please select an image")
+        return
       }
-
-      const hash = await computeFileHash(image);
-      const formData = new FormData();
-      formData.append("type", type);
-      formData.append("image", image);
-      formData.append("hash", hash);
-
+      const hash = await computeFileHash(image)
+      const formData = new FormData()
+      formData.append("type", type)
+      formData.append("image", image)
+      formData.append("hash", hash)
       try {
         await axios.post(`${API_BASE}/api/banners/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
-        });
-        alert("Banner uploaded successfully");
-        fetchBanners();
-        setImage(null);
-        const fileInput = document.getElementById("banner-file");
-        if (fileInput) fileInput.value = "";
-        setImage(null);
+        })
+        alert("Banner uploaded successfully")
+        fetchBanners()
+        setImage(null)
+        const fileInput = document.getElementById("banner-file")
+        if (fileInput) fileInput.value = ""
       } catch (err) {
-        console.error("Upload error:", err);
-        alert(err.response?.data?.message || "Upload failed");
+        console.error("Upload error:", err)
+        alert(err.response?.data?.message || "Upload failed")
       }
-      return;
+      return
     }
 
+    // ✅ Handle 'category' type (image + selected product type as title)
     if (type === "category") {
-      if (!image || !bannerTitle.trim()) {
-        alert("Please select an image and enter a banner name.");
-        return;
+      if (!image || !selectedCategoryType) {
+        alert("Please select an image and a category type.")
+        return
       }
-
-      const hash = await computeFileHash(image);
-      const formData = new FormData();
-      formData.append("type", "category");
-      formData.append("image", image);
-      formData.append("hash", hash);
-      formData.append("title", bannerTitle.trim());
-
+      const hash = await computeFileHash(image)
+      const formData = new FormData()
+      formData.append("type", "category")
+      formData.append("image", image)
+      formData.append("hash", hash)
+      formData.append("title", selectedCategoryType) // ✅ Use selectedCategoryType as title
       try {
         await axios.post(`${API_BASE}/api/banners/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
-        });
-        alert("Side banner uploaded successfully.");
-        setImage(null);
-        setBannerTitle("");
-        fetchBanners();
-        const fileInput = document.getElementById("banner-file");
-        if (fileInput) fileInput.value = "";
+        })
+        alert("Category banner uploaded successfully.")
+        setImage(null)
+        setSelectedCategoryType("") // Reset selected category type
+        fetchBanners()
+        const fileInput = document.getElementById("banner-file")
+        if (fileInput) fileInput.value = ""
       } catch (err) {
-        console.error("Upload error:", err);
-        alert(err.response?.data?.message || "Upload failed.");
+        console.error("Upload error:", err)
+        alert(err.response?.data?.message || "Upload failed.")
       }
-
-      return;
+      return
     }
 
-    // Handle 'side' and 'product-type' (multi product upload)
+    // Handle 'product-type' (multi product upload)
     if (type === "product-type") {
       if (selectedProductIds.length === 0) {
-        alert("Please select at least one product");
-        return;
+        alert("Please select at least one product")
+        return
       }
-
-      let successCount = 0;
-
+      let successCount = 0
       for (const productId of selectedProductIds) {
-        const product = products.find((p) => p._id === productId);
-          let variant = null;
-          if (selectedProductIds.length === 1) {
-            variant = product?.variants?.[selectedVariantIndex];
-          } else {
-            variant = product?.variants?.[0]; 
-          }
-        if (!product || !variant) continue;
-
-        const productImageUrl = product.images?.others?.[0] || "";
-        if (!productImageUrl) continue;
-
-        const discount = Number.parseFloat(variant.discountPercent) || 0;
-        const oldPrice = Number.parseFloat(variant.price) || 0;
-        const price = discount > 0 ? oldPrice * (1 - discount / 100) : oldPrice;
-
-        const formData = new FormData();
-        formData.append("type", type);
-        formData.append("productId", productId);
-        formData.append("productImageUrl", productImageUrl);
-        formData.append("title", product.title);
-        formData.append("price", price.toFixed(2));
-        formData.append("oldPrice", oldPrice.toFixed(2));
-        formData.append("discountPercent", discount.toString());
-
-        const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/);
-        if (sizeMatch) {
-          formData.append("weightValue", sizeMatch[1]);
-          formData.append("weightUnit", sizeMatch[2]);
+        const product = products.find((p) => p._id === productId)
+        let variant = null
+        if (selectedProductIds.length === 1) {
+          variant = product?.variants?.[selectedVariantIndex]
+        } else {
+          variant = product?.variants?.[0]
         }
-
+        if (!product || !variant) continue
+        const productImageUrl = product.images?.others?.[0] || ""
+        if (!productImageUrl) continue
+        const discount = Number.parseFloat(variant.discountPercent) || 0
+        const oldPrice = Number.parseFloat(variant.price) || 0
+        const price = discount > 0 ? oldPrice * (1 - discount / 100) : oldPrice
+        const formData = new FormData()
+        formData.append("type", type)
+        formData.append("productId", productId)
+        formData.append("productImageUrl", productImageUrl)
+        formData.append("title", product.title)
+        formData.append("price", price.toFixed(2))
+        formData.append("oldPrice", oldPrice.toFixed(2))
+        formData.append("discountPercent", discount.toString())
+        const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+        if (sizeMatch) {
+          formData.append("weightValue", sizeMatch[1])
+          formData.append("weightUnit", sizeMatch[2])
+        }
         try {
           const res = await axios.post(`${API_BASE}/api/banners/upload`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
-          });
-          console.log(`Uploaded banner for ${product.title}`, res.data);
-          successCount++;
+          })
+          console.log(`Uploaded banner for ${product.title}`, res.data)
+          successCount++
         } catch (err) {
-          console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message);
+          console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message)
         }
       }
-
       if (successCount > 0) {
-        alert(`Uploaded ${successCount} banner(s) successfully`);
-        fetchBanners();
+        alert(`Uploaded ${successCount} banner(s) successfully`)
+        fetchBanners()
       } else {
-        alert("No banners uploaded. Please check product images or errors.");
+        alert("No banners uploaded. Please check product images or errors.")
       }
-      setSelectedProductIds([]);
-      setSelectedVariantIndex(0);
-      return;
+      setSelectedProductIds([])
+      setSelectedVariantIndex(0)
+      return
     }
-
-    alert("Unknown banner type");
-  };
+    alert("Unknown banner type")
+  }
 
   const handleDelete = async (id) => {
-  if (window.confirm("Are you sure you want to delete this banner?")) {
-    try {
-      const response = await axios.delete(`${API_BASE}/api/banners/${id}`)
-
-      if (response.status === 200) {
-        alert("Banner deleted successfully")
-        fetchBanners() // or manually remove from state if needed
-      } else {
-        console.error("Unexpected response:", response)
+    if (window.confirm("Are you sure you want to delete this banner?")) {
+      try {
+        const response = await axios.delete(`${API_BASE}/api/banners/delete/${id}`) // Corrected endpoint
+        if (response.status === 200) {
+          alert("Banner deleted successfully")
+          fetchBanners()
+        } else {
+          console.error("Unexpected response:", response)
+          alert("Failed to delete banner")
+        }
+      } catch (err) {
+        console.error("Delete error:", err)
         alert("Failed to delete banner")
       }
-    } catch (err) {
-      console.error("Delete error:", err)
-      alert("Failed to delete banner")
     }
   }
-}
 
   const handleDeleteAll = async () => {
     const currentType = type === "all" ? "all" : type
@@ -256,7 +246,6 @@ const AdminBannerUpload = () => {
 
   const selectedProduct = getSelectedProduct()
   const selectedVariant = getSelectedVariant()
-
   const filteredBanners = banners.filter((b) => type === "all" || b.type === type)
 
   return (
@@ -269,9 +258,10 @@ const AdminBannerUpload = () => {
         <option value="offer">Offer Zone</option>
         <option value="product-type">Our Special Product's</option>
       </select>
+
       {type !== "all" && (
         <div className="bg-white shadow p-4 rounded mb-6">
-          { type === "product-type" && (
+          {type === "product-type" && (
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">Select Product(s):</label>
               <input
@@ -293,26 +283,23 @@ const AdminBannerUpload = () => {
                         value={product._id}
                         checked={selectedProductIds.includes(product._id)}
                         onChange={(e) => {
-                        const checked = e.target.checked;
-                        const value = e.target.value;
-
-                        setSelectedVariantIndex(0);
-
-                        setSelectedProductIds((prevIds) => {
-                          const maxSelections = type === "product-type" ? 10 : 3;
-
-                          if (checked) {
-                            if (prevIds.includes(value)) return prevIds;
-                            if (prevIds.length >= maxSelections) {
-                              alert(`You can select a maximum of ${maxSelections} products only.`);
-                              return prevIds;
+                          const checked = e.target.checked
+                          const value = e.target.value
+                          setSelectedVariantIndex(0)
+                          setSelectedProductIds((prevIds) => {
+                            const maxSelections = type === "product-type" ? 10 : 3
+                            if (checked) {
+                              if (prevIds.includes(value)) return prevIds
+                              if (prevIds.length >= maxSelections) {
+                                alert(`You can select a maximum of ${maxSelections} products only.`)
+                                return prevIds
+                              }
+                              return [...prevIds, value]
+                            } else {
+                              return prevIds.filter((id) => id !== value)
                             }
-                            return [...prevIds, value];
-                          } else {
-                            return prevIds.filter((id) => id !== value);
-                          }
-                        });
-                      }}
+                          })
+                        }}
                         className="accent-green-600"
                       />
                       <span className="text-sm">{product.title}</span>
@@ -320,8 +307,6 @@ const AdminBannerUpload = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Variant Dropdown if only one product is selected and it has multiple variants */}
               {selectedProductIds.length === 1 && selectedProduct?.variants?.length > 1 && (
                 <div className="mb-3">
                   <label className="block text-sm font-medium mb-1">Select Variant:</label>
@@ -339,8 +324,6 @@ const AdminBannerUpload = () => {
                   </select>
                 </div>
               )}
-
-              {/* Product Preview Block */}
               {selectedProductIds.length === 1 && selectedProduct && selectedVariant && (
                 <div className="bg-gray-50 p-3 rounded border">
                   <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
@@ -363,15 +346,12 @@ const AdminBannerUpload = () => {
                   </div>
                 </div>
               )}
-
-              {/* Multiple product preview grid if more than 1 selected */}
               {selectedProductIds.length > 1 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   {selectedProductIds.map((productId) => {
-                    const product = products.find((p) => p._id === productId);
-                    const variant = product?.variants?.[0];
-                    if (!product || !variant) return null;
-
+                    const product = products.find((p) => p._id === productId)
+                    const variant = product?.variants?.[0]
+                    if (!product || !variant) return null
                     return (
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
                         {product.images?.others?.[0] && (
@@ -390,37 +370,43 @@ const AdminBannerUpload = () => {
                           )}
                         </div>
                       </div>
-                    );
+                    )
                   })}
                 </div>
               )}
             </div>
           )}
+
+          {/* ✅ Updated: Category Banner Upload Section */}
           {type === "category" && (
             <>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">category Banner Title</label>
-                <input
-                  type="text"
-                  value={bannerTitle}
-                  onChange={(e) => setBannerTitle(e.target.value)}
-                  placeholder="e.g., Cold Drinks, Top Deals"
+                <label className="block text-sm font-medium mb-2">Select Category Type:</label>
+                <select
+                  value={selectedCategoryType}
+                  onChange={(e) => setSelectedCategoryType(e.target.value)}
                   className="p-2 border w-full rounded"
-                />
+                >
+                  <option value="">Select a product category</option>
+                  {productTypes.map((typeOption, index) => (
+                    <option key={index} value={typeOption}>
+                      {typeOption}
+                    </option>
+                  ))}
+                </select>
               </div>
-
               <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
-              
               {image && (
                 <img
-                  src={URL.createObjectURL(image)}
+                  src={URL.createObjectURL(image) || "/placeholder.svg"}
                   alt="Preview"
                   className="mb-4 w-full h-64 object-cover rounded border"
                 />
               )}
             </>
           )}
-          {(type === "homebanner" || type === "offer") && ( // Changed from slider to homebanner
+
+          {(type === "homebanner" || type === "offer") && (
             <>
               <input id="banner-file" type="file" accept="image/*" onChange={handleImageChange} className="mb-4" />
               {image && (
@@ -432,12 +418,13 @@ const AdminBannerUpload = () => {
               )}
             </>
           )}
+
           <button
             onClick={() => setTimeout(handleUpload, 100)}
             className={`px-4 py-2 rounded text-white ${
               ((type === "homebanner" || type === "offer") && image) ||
               (type === "product-type" && selectedProductIds.length > 0) ||
-              (type === "category" && image && bannerTitle.trim())
+              (type === "category" && image && selectedCategoryType) // ✅ Check for selectedCategoryType
                 ? "bg-green-600 hover:bg-green-700"
                 : "bg-gray-400 cursor-not-allowed"
             }`}
@@ -446,12 +433,12 @@ const AdminBannerUpload = () => {
           </button>
         </div>
       )}
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">
           {type === "all"
             ? "All Uploaded Banners"
-            : `${type === "homebanner"? "Main Banners": type === "category"? "Side Banners": type === "offer"? "Offer Zone": "Product Type Banners"} (${filteredBanners.length})`
-          }
+            : `${type === "homebanner" ? "Main Banners" : type === "category" ? "Side Banners" : type === "offer" ? "Offer Zone" : "Product Type Banners"} (${filteredBanners.length})`}
         </h3>
         {filteredBanners.length > 0 && (
           <button
@@ -460,8 +447,7 @@ const AdminBannerUpload = () => {
           >
             {type === "all"
               ? "Delete All Banners"
-              : `Delete All ${type === "homebanner"? "Main": type === "category"? "Side": type === "offer"? "Offer": "Product Type"} Banners`
-            }
+              : `Delete All ${type === "homebanner" ? "Main" : type === "category" ? "Side" : type === "offer" ? "Offer" : "Product Type"} Banners`}
           </button>
         )}
       </div>
