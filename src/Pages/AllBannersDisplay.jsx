@@ -14,28 +14,28 @@ const AllBannersDisplay = () => {
   const fetchAllBanners = async () => {
     try {
       const homeRes = await axios.get("/api/home-banners");
-      setHomeBanners(homeRes.data);
+      setHomeBanners(Array.isArray(homeRes.data) ? homeRes.data : []);
     } catch (err) {
       console.error("Failed to fetch home banners", err.response?.data || err.message);
     }
 
     try {
       const offerRes = await axios.get("/api/offer-banners");
-      setOfferBanners(offerRes.data);
+      setOfferBanners(Array.isArray(offerRes.data) ? offerRes.data : []);
     } catch (err) {
       console.error("Failed to fetch offer banners", err.response?.data || err.message);
     }
 
     try {
       const categoryRes = await axios.get("/api/category-banners");
-      setCategoryBanners(categoryRes.data);
+      setCategoryBanners(Array.isArray(categoryRes.data) ? categoryRes.data : []);
     } catch (err) {
       console.error("Failed to fetch category banners", err.response?.data || err.message);
     }
 
     try {
       const productTypeRes = await axios.get("/api/product-type-banners");
-      setProductTypeBanners(productTypeRes.data);
+      setProductTypeBanners(Array.isArray(productTypeRes.data) ? productTypeRes.data : []);
     } catch (err) {
       console.error("Failed to fetch product type banners", err.response?.data || err.message);
     }
@@ -56,6 +56,7 @@ const AllBannersDisplay = () => {
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
+      {/* Home Banners */}
       <Section
         title="🏠 Home Banners"
         banners={homeBanners}
@@ -69,6 +70,7 @@ const AllBannersDisplay = () => {
         )}
       />
 
+      {/* Offer Banners */}
       <Section
         title="🎁 Offer Banners"
         banners={offerBanners}
@@ -87,6 +89,7 @@ const AllBannersDisplay = () => {
         )}
       />
 
+      {/* Category Banners */}
       <Section
         title="📂 Category Banners"
         banners={categoryBanners}
@@ -106,6 +109,7 @@ const AllBannersDisplay = () => {
         )}
       />
 
+      {/* Product Type Banners */}
       <Section
         title="🛒 Product Type Banners"
         banners={productTypeBanners}
@@ -115,7 +119,7 @@ const AllBannersDisplay = () => {
             className="border rounded-lg p-4 shadow flex flex-col"
           >
             <img
-              src={banner.productImageUrl}
+              src={banner.productImageUrl || banner.imageUrl}
               alt={banner.title}
               className="w-full h-40 object-cover rounded mb-2"
             />
@@ -123,12 +127,16 @@ const AllBannersDisplay = () => {
             <p className="text-sm text-gray-500">{banner.productType}</p>
             <p className="text-sm text-green-700 font-semibold mt-1">
               ₹{banner.price}
-              <span className="text-gray-400 line-through ml-2">₹{banner.oldPrice}</span>
+              {banner.oldPrice && (
+                <span className="text-gray-400 line-through ml-2">₹{banner.oldPrice}</span>
+              )}
             </p>
-            <p className="text-xs text-blue-600 mt-1">
-              {banner.discountPercent}% OFF • {banner.weightValue}
-              {banner.weightUnit}
-            </p>
+            {banner.discountPercent && (
+              <p className="text-xs text-blue-600 mt-1">
+                {banner.discountPercent}% OFF • {banner.weightValue}
+                {banner.weightUnit}
+              </p>
+            )}
           </div>
         )}
       />
