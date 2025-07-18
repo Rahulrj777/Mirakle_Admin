@@ -137,7 +137,7 @@ const AdminBannerUpload = () => {
         formData.append("title", selectedCategoryType)
       } else if (type === "offerbanner") {
         endpoint = `${API_BASE}/api/offer-banners/${editingBanner ? editingBanner._id : "upload"}`
-        if (!image && !editingBanner && !editingBanner?.imageUrl) {
+        if (!image && !editingBanner?.imageUrl) {
           // Ensure image exists for new or old
           alert("Please select an image for the Offer Zone Banner.")
           return
@@ -365,7 +365,7 @@ const AdminBannerUpload = () => {
       const hasImage = !!image || (editingBanner && editingBanner.imageUrl)
       const hasTitle = !!title.trim()
       const hasPercentage = percentage !== "" // Allow 0, but not empty string
-      const isPercentageValid = Number(percentage) >= 0 && Number(percentage) <= 100
+      const isPercentageValid = !isNaN(Number(percentage)) && Number(percentage) >= 0 && Number(percentage) <= 100
       const hasOfferSlot = !!offerSlot
 
       let isLinkDataValid = true // Assume valid unless proven otherwise
@@ -379,9 +379,9 @@ const AdminBannerUpload = () => {
       if (linkedDiscountUpToForOffer !== "") {
         const discountVal = Number(linkedDiscountUpToForOffer)
         isDiscountUpToValid = !isNaN(discountVal) && discountVal >= 0 && discountVal <= 100
-        // If linkedDiscountUpToForOffer is set, then offerLinkType must be 'product' or 'category'
-        if (offerLinkType === "none") {
-          isDiscountUpToValid = false // Cannot have linkedDiscountUpTo without a product/category link
+        // If a discount value is provided AND it's greater than 0, a link type must be selected
+        if (isDiscountUpToValid && discountVal > 0 && offerLinkType === "none") {
+          isDiscountUpToValid = false
         }
       }
 
