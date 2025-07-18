@@ -132,7 +132,6 @@ const AdminBannerUpload = () => {
 
       const formData = new FormData();
         formData.append("title", title);
-        formData.append("percentage", percentage);
         formData.append("image", image);
         formData.append("type", "offerbanner"); 
         formData.append("slot", offerSlot);
