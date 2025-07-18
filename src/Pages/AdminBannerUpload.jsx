@@ -239,8 +239,8 @@ const AdminBannerUpload = () => {
     if (window.confirm("Are you sure you want to delete this banner?")) {
       try {
         const url = type === "offerbanner"
-          ? `${API_BASE}/api/offer-banners/${id}`  // Use offer-banner delete route
-          : `${API_BASE}/api/banners/${id}`         // Use generic banner delete route
+          ? `${API_BASE}/api/offer-banners/${id}` 
+          : `${API_BASE}/api/banners/${id}`     
 
         const response = await axios.delete(url)
 
