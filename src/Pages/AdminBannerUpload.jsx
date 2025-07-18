@@ -538,7 +538,7 @@ const AdminBannerUpload = () => {
         {filteredBanners.map((banner) => (
           <div key={banner._id} className="border p-3 rounded shadow relative">
             <img
-              src={`${API_BASE}${banner.imageUrl}`}
+              src={banner.imageUrl}
               alt={banner.title || banner.type}
               className="w-full h-40 object-cover rounded mb-2"
             />
