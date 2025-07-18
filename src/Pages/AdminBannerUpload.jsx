@@ -24,19 +24,41 @@ const AdminBannerUpload = () => {
 
   const fetchBanners = async () => {
     try {
+      let res;
       if (type === "offerbanner") {
-        const res = await axios.get(`${API_BASE}/api/offer-banners`)
-        console.log("Fetched Offer Banners:", res.data)
-        setBanners(res.data)
+        res = await axios.get(`${API_BASE}/api/offer-banners`);
+      } else if (type === "homebanner") {
+        res = await axios.get(`${API_BASE}/api/home-banners`);
+      } else if (type === "category") {
+        res = await axios.get(`${API_BASE}/api/category-banners`);
+      } else if (type === "product-type") {
+        res = await axios.get(`${API_BASE}/api/product-type-banners`);
+      } else if (type === "all") {
+        // Optional: fetch all banner types in parallel (if you want 'Show All' to work)
+        const [home, category, offer, product] = await Promise.all([
+          axios.get(`${API_BASE}/api/home-banners`),
+          axios.get(`${API_BASE}/api/category-banners`),
+          axios.get(`${API_BASE}/api/offer-banners`),
+          axios.get(`${API_BASE}/api/product-type-banners`)
+        ]);
+        const combined = [
+          ...home.data,
+          ...category.data,
+          ...offer.data,
+          ...product.data
+        ];
+        setBanners(combined);
+        return;
       } else {
-        const res = await axios.get(`${API_BASE}/api/banners`)
-        console.log("Fetched Banners:", res.data)
-        setBanners(res.data)
+        console.warn("Unknown banner type:", type);
+        return;
       }
+
+      setBanners(res.data);
     } catch (err) {
-      console.error("Failed to fetch banners:", err)
+      console.error("Failed to fetch banners:", err);
     }
-  }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -240,7 +262,7 @@ const AdminBannerUpload = () => {
       try {
         const url = type === "offerbanner"
           ? `${API_BASE}/api/offer-banners/${id}` 
-          : `${API_BASE}/api/banners/${id}`     
+          : `${API_BASE}/api/banners?type=${type}`     
 
         const response = await axios.delete(url)
 
@@ -463,9 +485,8 @@ const AdminBannerUpload = () => {
           </>
         )}
 
-          {type === "offerbanner" && (
+        {type === "offerbanner" && (
           <>
-
             <input
               type="text"
               placeholder="Enter Offer Title"
@@ -502,20 +523,20 @@ const AdminBannerUpload = () => {
           </>
         )}
 
-          <button
-            onClick={() => setTimeout(handleUpload, 100)}
-            className={`px-4 py-2 rounded text-white ${
-              ((type === "homebanner" || type === "offerbanner") && image && (type !== "offerbanner" || title)) ||
-              (type === "product-type" && selectedProductIds.length > 0) ||
-              (type === "category" && image && selectedCategoryType)
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-gray-400 cursor-not-allowed"
-            }`}
-          >
-            Upload Banner
-          </button>
-        </div>
-      )}
+        <button
+          onClick={() => setTimeout(handleUpload, 100)}
+          className={`px-4 py-2 rounded text-white ${
+            ((type === "homebanner" || type === "offerbanner") && image && (type !== "offerbanner" || title)) ||
+            (type === "product-type" && selectedProductIds.length > 0) ||
+            (type === "category" && image && selectedCategoryType)
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-gray-400 cursor-not-allowed"
+          }`}
+        >
+          Upload Banner
+        </button>
+      </div>
+    )}
 
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">
