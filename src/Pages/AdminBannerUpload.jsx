@@ -464,16 +464,18 @@ const AdminBannerUpload = () => {
               />
             )}
 
-            <select
-              value={offerSlot}
-              onChange={(e) => setOfferSlot(e.target.value)}
-              className="mb-4 p-2 border rounded w-full"
-            >
-              <option value="">Select Slot</option>
-              <option value="left">Left Banner (50% OFF)</option>
-              <option value="right">Right Banner (Special Offer)</option>
-            </select>
-
+            {type === "offerbanner" && (
+              <select
+                value={offerSlot}
+                onChange={(e) => setOfferSlot(e.target.value)}
+                className="mb-4 p-2 border rounded w-full"
+              >
+                <option value="">Select Slot</option>
+                <option value="left">Left Banner (50% OFF)</option>
+                <option value="right">Right Banner (Special Offer)</option>
+              </select>
+            )}
+            
             {image && (
               <img
                 src={URL.createObjectURL(image)}
