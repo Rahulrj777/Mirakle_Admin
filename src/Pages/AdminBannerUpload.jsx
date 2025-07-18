@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import SparkMD5 from "spark-md5"
@@ -98,7 +96,6 @@ const AdminBannerUpload = () => {
     }
 
     if (type === "homebanner") {
-      // Send to banners/upload
       const hash = await computeFileHash(image);
       const formData = new FormData();
       formData.append("type", type);
@@ -122,7 +119,6 @@ const AdminBannerUpload = () => {
     }
 
     if (type === "offerbanner") {
-      // Check for max 2 banners
       const currentOffers = banners.filter(b => b.type === "offerbanner")
       if (currentOffers.length >= 2) {
         alert("Only 2 Offer Banners are allowed.")
@@ -135,11 +131,11 @@ const AdminBannerUpload = () => {
       }
 
       const formData = new FormData();
-      formData.append("title", title);
-      formData.append("percentage", percentage);
-      formData.append("image", image);
-      formData.append("type", "offerbanner"); 
-      formData.append("slot", offerSlot);
+        formData.append("title", title);
+        formData.append("percentage", percentage);
+        formData.append("image", image);
+        formData.append("type", "offerbanner"); 
+        formData.append("slot", offerSlot);
 
       try {
         await axios.post(`${API_BASE}/api/offer-banners/upload`, formData);
@@ -183,7 +179,6 @@ const AdminBannerUpload = () => {
       return
     }
 
-    // Handle 'product-type' (multi product upload)
     if (type === "product-type") {
       if (selectedProductIds.length === 0) {
         alert("Please select at least one product")
