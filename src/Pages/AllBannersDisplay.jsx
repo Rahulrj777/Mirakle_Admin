@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 
 const AllBannersDisplay = () => {
@@ -13,15 +13,31 @@ const AllBannersDisplay = () => {
 
   const fetchAllBanners = async () => {
     try {
-      const res = await axios.get("/api/banners/all");
-      const allBanners = res.data;
-
-      setHomeBanners(allBanners.filter((b) => b.type === "homebanner"));
-      setOfferBanners(allBanners.filter((b) => b.type === "offer"));
-      setCategoryBanners(allBanners.filter((b) => b.type === "category"));
-      setProductTypeBanners(allBanners.filter((b) => b.type === "product-type"));
+      const homeRes = await axios.get("/api/home-banners");
+      setHomeBanners(homeRes.data);
     } catch (err) {
-      console.error("Failed to fetch banners", err.response?.data || err.message);
+      console.error("Failed to fetch home banners", err.response?.data || err.message);
+    }
+
+    try {
+      const offerRes = await axios.get("/api/offer-banners");
+      setOfferBanners(offerRes.data);
+    } catch (err) {
+      console.error("Failed to fetch offer banners", err.response?.data || err.message);
+    }
+
+    try {
+      const categoryRes = await axios.get("/api/category-banners");
+      setCategoryBanners(categoryRes.data);
+    } catch (err) {
+      console.error("Failed to fetch category banners", err.response?.data || err.message);
+    }
+
+    try {
+      const productTypeRes = await axios.get("/api/product-type-banners");
+      setProductTypeBanners(productTypeRes.data);
+    } catch (err) {
+      console.error("Failed to fetch product type banners", err.response?.data || err.message);
     }
   };
 
@@ -106,11 +122,12 @@ const AllBannersDisplay = () => {
             <h3 className="text-lg font-medium">{banner.title}</h3>
             <p className="text-sm text-gray-500">{banner.productType}</p>
             <p className="text-sm text-green-700 font-semibold mt-1">
-              ₹{banner.price}{" "}
+              ₹{banner.price}
               <span className="text-gray-400 line-through ml-2">₹{banner.oldPrice}</span>
             </p>
             <p className="text-xs text-blue-600 mt-1">
-              {banner.discountPercent}% OFF • {banner.weightValue}{banner.weightUnit}
+              {banner.discountPercent}% OFF • {banner.weightValue}
+              {banner.weightUnit}
             </p>
           </div>
         )}
