@@ -141,7 +141,8 @@ const AdminBannerUpload = () => {
           alert("Please select an image for the Offer Zone Banner.")
           return
         }
-        if (!title.trim() || !percentage || !offerSlot) {
+        if (!title.trim() || percentage === "" || !offerSlot) {
+          // percentage can be 0, so check for empty string
           alert("Please enter title, percentage, and select an offer slot.")
           return
         }
@@ -156,7 +157,8 @@ const AdminBannerUpload = () => {
         } else if (offerLinkType === "category" && linkedCategoryForOffer) {
           formData.append("linkedCategory", linkedCategoryForOffer)
         }
-        if (linkedDiscountUpToForOffer) {
+        if (linkedDiscountUpToForOffer !== "") {
+          // Only append if it has a value
           formData.append("linkedDiscountUpTo", linkedDiscountUpToForOffer)
         }
       } else if (type === "product-type") {
@@ -324,9 +326,9 @@ const AdminBannerUpload = () => {
     if (banner.type === "category") {
       setSelectedCategoryType(banner.title || "")
     } else if (banner.type === "offerbanner") {
-      setPercentage(banner.percentage || "")
+      setPercentage(banner.percentage === undefined ? "" : String(banner.percentage)) // Handle 0 correctly
       setOfferSlot(banner.slot || "")
-      setLinkedDiscountUpToForOffer(banner.linkedDiscountUpTo || "")
+      setLinkedDiscountUpToForOffer(banner.linkedDiscountUpTo === undefined ? "" : String(banner.linkedDiscountUpTo)) // Handle 0 correctly
       if (banner.linkedProductId) {
         setOfferLinkType("product")
         setLinkedProductForOffer(products.find((p) => p._id === banner.linkedProductId) || null)
@@ -349,19 +351,54 @@ const AdminBannerUpload = () => {
 
   const isUploadEnabled = (() => {
     if (type === "all") return false
-    if (type === "homebanner") return !!image || !!editingBanner
-    if (type === "category") return (!!image || !!editingBanner) && !!selectedCategoryType
-    if (type === "offerbanner") {
-      const baseValid = (!!image || !!editingBanner) && !!title.trim() && !!percentage && !!offerSlot
-      const linkValid =
-        (offerLinkType === "product" && linkedProductForOffer) ||
-        (offerLinkType === "category" && linkedCategoryForOffer) ||
-        (offerLinkType === "none" && !linkedDiscountUpToForOffer)
-      const discountValid =
-        linkedDiscountUpToForOffer === "" || (linkedDiscountUpToForOffer >= 0 && linkedDiscountUpToForOffer <= 100)
-      return baseValid && linkValid && discountValid
+
+    if (type === "homebanner") {
+      return !!image || (editingBanner && editingBanner.imageUrl)
     }
-    if (type === "product-type") return selectedProductIds.length > 0
+
+    if (type === "category") {
+      return (!!image || (editingBanner && editingBanner.imageUrl)) && !!selectedCategoryType
+    }
+
+    if (type === "offerbanner") {
+      const hasImage = !!image || (editingBanner && editingBanner.imageUrl)
+      const hasTitle = !!title.trim()
+      const hasPercentage = percentage !== "" // Allow 0, but not empty string
+      const isPercentageValid = Number(percentage) >= 0 && Number(percentage) <= 100
+      const hasOfferSlot = !!offerSlot
+
+      let isLinkDataValid = true // Assume valid unless proven otherwise
+      if (offerLinkType === "product") {
+        isLinkDataValid = !!linkedProductForOffer
+      } else if (offerLinkType === "category") {
+        isLinkDataValid = !!linkedCategoryForOffer
+      }
+
+      let isDiscountUpToValid = true // Assume valid unless proven otherwise
+      if (linkedDiscountUpToForOffer !== "") {
+        const discountVal = Number(linkedDiscountUpToForOffer)
+        isDiscountUpToValid = !isNaN(discountVal) && discountVal >= 0 && discountVal <= 100
+        // If linkedDiscountUpToForOffer is set, then offerLinkType must be 'product' or 'category'
+        if (offerLinkType === "none") {
+          isDiscountUpToValid = false // Cannot have linkedDiscountUpTo without a product/category link
+        }
+      }
+
+      return (
+        hasImage &&
+        hasTitle &&
+        hasPercentage &&
+        isPercentageValid &&
+        hasOfferSlot &&
+        isLinkDataValid &&
+        isDiscountUpToValid
+      )
+    }
+
+    if (type === "product-type") {
+      return selectedProductIds.length > 0
+    }
+
     return false
   })()
 
@@ -597,6 +634,7 @@ const AdminBannerUpload = () => {
                         setOfferLinkType("none")
                         setLinkedProductForOffer(null)
                         setLinkedCategoryForOffer("")
+                        setLinkedDiscountUpToForOffer("") // Clear discount if no link
                       }}
                       className="mr-2 accent-green-600"
                     />
