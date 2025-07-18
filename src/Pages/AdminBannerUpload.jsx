@@ -1,31 +1,30 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react" // Import useCallback
+import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
-  // ✅ FIXED: Set initial type to "all" to show all banners by default
-  const [type, setType] = useState("all")
-  const [banners, setBanners] = useState([])
+  const [type, setType] = useState("all") // Default to "all" to show all banners
+  const [banners, setBanners] = useState([]) // Will hold all banners (main, category, product-type)
+  const [offerBanners, setOfferBanners] = useState([]) // Will hold only offer banners
   const [products, setProducts] = useState([])
   const [selectedProductIds, setSelectedProductIds] = useState([])
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
   const [productSearchTerm, setProductSearchTerm] = useState("")
   const [selectedCategoryType, setSelectedCategoryType] = useState("")
-  const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [title, setTitle] = useState("") // For offerbanner title
   const [percentage, setPercentage] = useState("") // For offerbanner percentage
   const [offerSlot, setOfferSlot] = useState("") // For offerbanner slot
+  const [availableProductTypes, setAvailableProductTypes] = useState([])
 
-  // ✅ NEW: Fetch banners and products on component mount and when type changes
+  // Fetch all banners and offer banners on component mount
   useEffect(() => {
-    fetchBanners()
-    fetchProducts()
-  }, []) // Run once on mount
+    fetchAllBannersAndProducts()
+  }, [])
 
-  // ✅ NEW: Reset image and related states when banner type changes
+  // Reset image and related states when banner type changes
   useEffect(() => {
     setImage(null)
     setTitle("")
@@ -35,33 +34,28 @@ const AdminBannerUpload = () => {
     setSelectedVariantIndex(0)
     setProductSearchTerm("")
     setSelectedCategoryType("")
-    // Re-fetch banners when type changes to update the filtered list
-    if (type !== "all") {
-      // Only re-fetch if we're switching to a specific upload type
-      fetchBanners()
-    }
+    const fileInput = document.getElementById(`banner-file-${type}`)
+    if (fileInput) fileInput.value = "" // Clear file input
   }, [type])
 
-  const fetchBanners = async () => {
+  const fetchAllBannersAndProducts = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/api/banners`)
-      console.log("Fetched All Banners:", res.data)
-      setBanners(res.data)
-    } catch (err) {
-      console.error("Failed to fetch banners:", err)
-      setBanners([])
-    }
-  }
-
-  const fetchProducts = async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/api/products/all-products`)
-      setProducts(res.data)
-      const uniqueTypes = [...new Set(res.data.map((p) => p.productType).filter(Boolean))].sort()
+      const [bannersRes, offerBannersRes, productsRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/banners`),
+        axios.get(`${API_BASE}/api/offer-banners`),
+        axios.get(`${API_BASE}/api/products/all-products`),
+      ])
+      setBanners(bannersRes.data)
+      setOfferBanners(offerBannersRes.data)
+      setProducts(productsRes.data)
+      const uniqueTypes = [...new Set(productsRes.data.map((p) => p.productType).filter(Boolean))].sort()
       setAvailableProductTypes(uniqueTypes)
     } catch (err) {
-      console.error("Failed to fetch products:", err)
+      console.error("Failed to fetch all data:", err)
+      setBanners([])
+      setOfferBanners([])
       setProducts([])
+      setAvailableProductTypes([])
     }
   }
 
@@ -75,7 +69,6 @@ const AdminBannerUpload = () => {
     setImage(file)
   }
 
-  // ✅ NEW: Function to clear the selected image
   const clearImage = useCallback(() => {
     setImage(null)
     const fileInput = document.getElementById(`banner-file-${type}`)
@@ -98,129 +91,153 @@ const AdminBannerUpload = () => {
     const formData = new FormData()
     formData.append("type", type)
 
-    if (type === "homebanner") {
-      if (!image) {
-        alert("Please select an image for the Main Banner.")
-        return
-      }
-      formData.append("image", image)
-    } else if (type === "category") {
-      if (!image) {
-        alert("Please select an image for the Category Banner.")
-        return
-      }
-      if (!selectedCategoryType) {
-        alert("Please select a category type.")
-        return
-      }
-      if (banners.some((b) => b.type === "category" && b.title === selectedCategoryType)) {
-        alert(`A banner for category '${selectedCategoryType}' already exists.`)
-        return
-      }
-      formData.append("image", image)
-      formData.append("title", selectedCategoryType)
-    } else if (type === "offerbanner") {
-      if (!image) {
-        alert("Please select an image for the Offer Zone Banner.")
-        return
-      }
-      if (!title.trim() || !percentage || !offerSlot) {
-        alert("Please enter title, percentage, and select an offer slot.")
-        return
-      }
-      if (banners.some((b) => b.type === "offerbanner" && b.slot === offerSlot)) {
-        alert(`An offer banner for slot '${offerSlot}' already exists.`)
-        return
-      }
-      formData.append("title", title.trim())
-      formData.append("percentage", percentage)
-      formData.append("slot", offerSlot)
-      formData.append("image", image)
-    } else if (type === "product-type") {
-      if (selectedProductIds.length === 0) {
-        alert("Please select at least one product.")
-        return
-      }
-      let successCount = 0
-      for (const productId of selectedProductIds) {
-        const product = products.find((p) => p._id === productId)
-        let variant = null
-        if (selectedProductIds.length === 1) {
-          variant = product?.variants?.[selectedVariantIndex]
+    try {
+      if (type === "homebanner") {
+        if (!image) {
+          alert("Please select an image for the Main Banner.")
+          return
+        }
+        formData.append("image", image)
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        alert("✅ Main Banner uploaded")
+      } else if (type === "category") {
+        if (!image) {
+          alert("Please select an image for the Category Banner.")
+          return
+        }
+        if (!selectedCategoryType) {
+          alert("Please select a category type.")
+          return
+        }
+        if (banners.some((b) => b.type === "category" && b.title === selectedCategoryType)) {
+          alert(`A banner for category '${selectedCategoryType}' already exists.`)
+          return
+        }
+        formData.append("image", image)
+        formData.append("title", selectedCategoryType)
+        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        alert("✅ Category Banner uploaded")
+      } else if (type === "offerbanner") {
+        if (!image) {
+          alert("Please select an image for the Offer Zone Banner.")
+          return
+        }
+        if (!title.trim() || !percentage || !offerSlot) {
+          alert("Please enter title, percentage, and select an offer slot.")
+          return
+        }
+        // Client-side check for duplicate offer slot
+        if (offerBanners.some((b) => b.slot === offerSlot)) {
+          alert(`An offer banner for slot '${offerSlot}' already exists.`)
+          return
+        }
+        formData.append("title", title.trim())
+        formData.append("percentage", percentage)
+        formData.append("slot", offerSlot)
+        formData.append("image", image)
+        // ✅ MODIFIED: Send to offer-banners endpoint
+        await axios.post(`${API_BASE}/api/offer-banners/upload`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        alert("✅ Offer Zone Banner uploaded")
+      } else if (type === "product-type") {
+        if (selectedProductIds.length === 0) {
+          alert("Please select at least one product.")
+          return
+        }
+        let successCount = 0
+        for (const productId of selectedProductIds) {
+          const product = products.find((p) => p._id === productId)
+          let variant = null
+          if (selectedProductIds.length === 1) {
+            variant = product?.variants?.[selectedVariantIndex]
+          } else {
+            variant = product?.variants?.[0]
+          }
+          if (!product || !variant) continue
+
+          const productImageUrl = product.images?.others?.[0] || ""
+          if (!productImageUrl) {
+            console.warn(`Skipping product ${product.title}: No image URL found.`)
+            continue
+          }
+
+          if (banners.some((b) => b.type === "product-type" && b.productId === productId)) {
+            console.warn(`Skipping upload for product ${product.title}: A banner for this product already exists.`)
+            continue
+          }
+
+          const discount = Number.parseFloat(variant.discountPercent) || 0
+          const oldPrice = Number.parseFloat(variant.price) || 0
+          const price = oldPrice - (oldPrice * discount) / 100
+          const productFormData = new FormData()
+          productFormData.append("type", type)
+          productFormData.append("productId", productId)
+          productFormData.append("productImageUrl", productImageUrl)
+          productFormData.append("title", product.title)
+          productFormData.append("price", price.toFixed(2))
+          productFormData.append("oldPrice", oldPrice.toFixed(2))
+          productFormData.append("discountPercent", discount.toString())
+          productFormData.append("productType", product.productType)
+          const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+          if (sizeMatch) {
+            productFormData.append("weightValue", sizeMatch[1])
+            productFormData.append("weightUnit", sizeMatch[2])
+          }
+          try {
+            await axios.post(`${API_BASE}/api/banners/upload`, productFormData, {
+              headers: { "Content-Type": "multipart/form-data" },
+            })
+            console.log(`Uploaded banner for ${product.title}`)
+            successCount++
+          } catch (err) {
+            console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message)
+            alert(`Failed to upload banner for ${product.title}: ${err.response?.data?.message || err.message}`)
+          }
+        }
+        if (successCount > 0) {
+          alert(`Uploaded ${successCount} banner(s) successfully`)
         } else {
-          variant = product?.variants?.[0]
+          alert("No banners uploaded. Please check product images or errors.")
         }
-        if (!product || !variant) continue
-
-        const productImageUrl = product.images?.others?.[0] || ""
-        if (!productImageUrl) {
-          console.warn(`Skipping product ${product.title}: No image URL found.`)
-          continue
-        }
-
-        if (banners.some((b) => b.type === "product-type" && b.productId === productId)) {
-          console.warn(`Skipping upload for product ${product.title}: A banner for this product already exists.`)
-          continue
-        }
-
-        const discount = Number.parseFloat(variant.discountPercent) || 0
-        const oldPrice = Number.parseFloat(variant.price) || 0
-        const price = oldPrice - (oldPrice * discount) / 100
-        const productFormData = new FormData()
-        productFormData.append("type", type)
-        productFormData.append("productId", productId)
-        productFormData.append("productImageUrl", productImageUrl)
-        productFormData.append("title", product.title)
-        productFormData.append("price", price.toFixed(2))
-        productFormData.append("oldPrice", oldPrice.toFixed(2))
-        productFormData.append("discountPercent", discount.toString())
-        productFormData.append("productType", product.productType)
-        const sizeMatch = variant.size.match(/^([\d.]+)([a-zA-Z]+)$/)
-        if (sizeMatch) {
-          productFormData.append("weightValue", sizeMatch[1])
-          productFormData.append("weightUnit", sizeMatch[2])
-        }
-        try {
-          const res = await axios.post(`${API_BASE}/api/banners/upload`, productFormData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          })
-          console.log(`Uploaded banner for ${product.title}`, res.data)
-          successCount++
-        } catch (err) {
-          console.error(`❌ Failed to upload banner for ${product.title}`, err.response?.data || err.message)
-          alert(`Failed to upload banner for ${product.title}: ${err.response?.data?.message || err.message}`)
-        }
-      }
-      if (successCount > 0) {
-        alert(`Uploaded ${successCount} banner(s) successfully`)
-        fetchBanners()
       } else {
-        alert("No banners uploaded. Please check product images or errors.")
+        // This else block should ideally not be reached if all types are handled
+        alert("Unknown banner type selected. Please choose a valid banner type.")
+        return
       }
-      setSelectedProductIds([])
-      setSelectedVariantIndex(0)
-      return
+      // If upload was successful for any type, re-fetch all data
+      fetchAllBannersAndProducts()
+    } catch (err) {
+      console.error("❌ Upload error:", err.response?.data || err.message)
+      alert(err.response?.data?.message || "Upload failed")
     }
-    // This 'else' block should ideally not be reached if all types are handled
-    alert("Unknown banner type selected. Please choose a valid banner type.")
   }
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this banner?")) {
-      try {
-        const url = `${API_BASE}/api/banners/${id}`
-        const response = await axios.delete(url)
-        if (response.status === 200) {
-          alert("Banner deleted successfully")
-          fetchBanners()
-        } else {
-          console.error("Unexpected response:", response)
-          alert("Failed to delete banner")
-        }
-      } catch (err) {
-        console.error("Delete error:", err.response?.data || err.message)
-        alert(err.response?.data?.message || "Failed to delete banner")
+  const handleDelete = async (bannerId, bannerType) => {
+    if (!window.confirm("Are you sure you want to delete this banner?")) return
+
+    try {
+      let url = ""
+      if (bannerType === "offerbanner") {
+        url = `${API_BASE}/api/offer-banners/${bannerId}`
+      } else {
+        url = `${API_BASE}/api/banners/${bannerId}`
       }
+      const response = await axios.delete(url)
+      if (response.status === 200) {
+        alert("Banner deleted successfully")
+        fetchAllBannersAndProducts()
+      } else {
+        console.error("Unexpected response:", response)
+        alert("Failed to delete banner")
+      }
+    } catch (err) {
+      console.error("Delete error:", err.response?.data || err.message)
+      alert(err.response?.data?.message || "Failed to delete banner")
     }
   }
 
@@ -237,31 +254,47 @@ const AdminBannerUpload = () => {
       currentType === "all"
         ? "Are you sure you want to delete ALL banners?"
         : `Delete all ${typeNames[currentType]} banners?`
-    if (confirm(confirmMessage)) {
-      try {
-        const url = `${API_BASE}/api/banners${currentType !== "all" ? `?type=${currentType}` : ""}`
-        const response = await axios.delete(url)
-        alert(response.data.message || "Banners deleted successfully")
-        fetchBanners()
-      } catch (err) {
-        console.error("Delete all error:", err.response?.data || err.message)
-        alert(err.response?.data?.message || "Failed to delete banners")
+    if (!confirm(confirmMessage)) return
+
+    try {
+      if (currentType === "offerbanner") {
+        // ✅ MODIFIED: Delete all offer banners
+        await axios.delete(`${API_BASE}/api/offer-banners`)
+        alert("All offer banners deleted successfully")
+      } else if (currentType === "all") {
+        // Delete all from both endpoints
+        await Promise.all([
+          axios.delete(`${API_BASE}/api/banners?type=all`), // This route handles homebanner, category, product-type
+          axios.delete(`${API_BASE}/api/offer-banners`),
+        ])
+        alert("All banners deleted successfully")
+      } else {
+        // Delete specific type from the main banners endpoint
+        await axios.delete(`${API_BASE}/api/banners?type=${currentType}`)
+        alert(`All ${typeNames[currentType]} banners deleted successfully`)
       }
+      fetchAllBannersAndProducts()
+    } catch (err) {
+      console.error("Delete all error:", err.response?.data || err.message)
+      alert(err.response?.data?.message || "Failed to delete banners")
     }
   }
 
   const selectedProduct = getSelectedProduct()
   const selectedVariant = getSelectedVariant()
-  const filteredBanners = banners.filter((b) => type === "all" || b.type === type)
+
+  // Combine and filter banners for display
+  const allCombinedBanners = [...banners, ...offerBanners]
+  const filteredBanners = allCombinedBanners.filter((b) => type === "all" || b.type === type)
 
   // Determine if the upload button should be enabled
   const isUploadEnabled = (() => {
-    if (type === "all") return false // Cannot upload in "Show All" mode
+    if (type === "all") return false
     if (type === "homebanner") return !!image
     if (type === "category") return !!image && !!selectedCategoryType
     if (type === "offerbanner") return !!image && !!title.trim() && !!percentage && !!offerSlot
     if (type === "product-type") return selectedProductIds.length > 0
-    return false // Fallback for unknown types
+    return false
   })()
 
   return (
@@ -402,92 +435,89 @@ const AdminBannerUpload = () => {
             </div>
           )}
 
-          {(type === "category" || type === "homebanner" || type === "offerbanner") && (
+          {type === "category" && (
             <>
-              {type === "category" && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Select Category Type:</label>
-                  <select
-                    value={selectedCategoryType}
-                    onChange={(e) => setSelectedCategoryType(e.target.value)}
-                    className="p-2 border w-full rounded"
-                  >
-                    <option value="">Select a product category</option>
-                    {availableProductTypes.map((typeOption, index) => {
-                      const isCategoryBannerExisting = banners.some(
-                        (b) => b.type === "category" && b.title === typeOption,
-                      )
-                      return (
-                        <option key={index} value={typeOption} disabled={isCategoryBannerExisting}>
-                          {typeOption} {isCategoryBannerExisting && "(Banner Exists)"}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </div>
-              )}
-
-              {type === "offerbanner" && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Enter Offer Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="mb-4 p-2 border rounded w-full"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Discount Percentage (e.g., 50)"
-                    value={percentage}
-                    onChange={(e) => setPercentage(e.target.value)}
-                    className="mb-4 p-2 border rounded w-full"
-                  />
-                  <select
-                    value={offerSlot}
-                    onChange={(e) => setOfferSlot(e.target.value)}
-                    className="mb-4 p-2 border rounded w-full"
-                  >
-                    <option value="">Select Slot</option>
-                    <option value="left" disabled={banners.some((b) => b.type === "offerbanner" && b.slot === "left")}>
-                      Left Banner {banners.some((b) => b.type === "offerbanner" && b.slot === "left") && "(Exists)"}
-                    </option>
-                    <option
-                      value="right"
-                      disabled={banners.some((b) => b.type === "offerbanner" && b.slot === "right")}
-                    >
-                      Right Banner {banners.some((b) => b.type === "offerbanner" && b.slot === "right") && "(Exists)"}
-                    </option>
-                  </select>
-                </>
-              )}
-
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  id={`banner-file-${type}`}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="flex-1"
-                />
-                {image && (
-                  <button onClick={clearImage} className="bg-red-500 text-white px-3 py-1 rounded text-sm">
-                    Clear Image
-                  </button>
-                )}
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Select Category Type:</label>
+                <select
+                  value={selectedCategoryType}
+                  onChange={(e) => setSelectedCategoryType(e.target.value)}
+                  className="p-2 border w-full rounded"
+                >
+                  <option value="">Select a product category</option>
+                  {availableProductTypes.map((typeOption, index) => {
+                    const isCategoryBannerExisting = banners.some(
+                      (b) => b.type === "category" && b.title === typeOption,
+                    )
+                    return (
+                      <option key={index} value={typeOption} disabled={isCategoryBannerExisting}>
+                        {typeOption} {isCategoryBannerExisting && "(Banner Exists)"}
+                      </option>
+                    )
+                  })}
+                </select>
               </div>
-              {image && (
-                <img
-                  src={URL.createObjectURL(image) || "/placeholder.svg"}
-                  alt="Preview"
-                  className="mb-4 w-full h-64 object-cover rounded border"
-                />
-              )}
             </>
           )}
 
+          {type === "offerbanner" && (
+            <>
+              <input
+                type="text"
+                placeholder="Enter Offer Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mb-4 p-2 border rounded w-full"
+              />
+              <input
+                type="number"
+                placeholder="Discount Percentage (e.g., 50)"
+                value={percentage}
+                onChange={(e) => setPercentage(e.target.value)}
+                className="mb-4 p-2 border rounded w-full"
+              />
+              <select
+                value={offerSlot}
+                onChange={(e) => setOfferSlot(e.target.value)}
+                className="mb-4 p-2 border rounded w-full"
+              >
+                <option value="">Select Slot</option>
+                <option value="left" disabled={offerBanners.some((b) => b.slot === "left")}>
+                  Left Banner {offerBanners.some((b) => b.slot === "left") && "(Exists)"}
+                </option>
+                <option value="right" disabled={offerBanners.some((b) => b.slot === "right")}>
+                  Right Banner {offerBanners.some((b) => b.slot === "right") && "(Exists)"}
+                </option>
+              </select>
+            </>
+          )}
+
+          {(type === "homebanner" || type === "category" || type === "offerbanner") && (
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                id={`banner-file-${type}`}
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="flex-1"
+              />
+              {image && (
+                <button onClick={clearImage} className="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                  Clear Image
+                </button>
+              )}
+            </div>
+          )}
+          {(type === "homebanner" || type === "category" || type === "offerbanner") && image && (
+            <img
+              src={URL.createObjectURL(image) || "/placeholder.svg"}
+              alt="Preview"
+              className="mb-4 w-full h-64 object-cover rounded border"
+            />
+          )}
+
           <button
-            onClick={() => setTimeout(handleUpload, 100)}
+            onClick={handleUpload}
             className={`px-4 py-2 rounded text-white ${isUploadEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
             disabled={!isUploadEnabled}
           >
@@ -550,7 +580,7 @@ const AdminBannerUpload = () => {
             )}
             <div className="mt-3 text-center">
               <button
-                onClick={() => handleDelete(banner._id)}
+                onClick={() => handleDelete(banner._id, banner.type)}
                 className="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600"
               >
                 Delete
