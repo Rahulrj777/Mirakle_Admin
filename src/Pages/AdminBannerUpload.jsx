@@ -446,14 +446,6 @@ const AdminBannerUpload = () => {
 
           {(type === "homebanner" || type === "offerbanner") && (
           <>
-            <input
-              id="banner-file"
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="mb-4"
-            />
-
             {type === "offerbanner" && (
               <input
                 type="text"
@@ -475,6 +467,14 @@ const AdminBannerUpload = () => {
                 <option value="right">Right Banner (Special Offer)</option>
               </select>
             )}
+
+            <input
+              id="banner-file"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="mb-4"
+            />
             
             {image && (
               <img
