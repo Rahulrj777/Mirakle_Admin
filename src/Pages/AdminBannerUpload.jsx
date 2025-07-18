@@ -34,7 +34,7 @@ const AdminBannerUpload = () => {
       } else if (type === "product-type") {
         res = await axios.get(`${API_BASE}/api/product-type-banners`);
       } else if (type === "all") {
-        // Optional: fetch all banner types in parallel (if you want 'Show All' to work)
+
         const [home, category, offer, product] = await Promise.all([
           axios.get(`${API_BASE}/api/home-banners`),
           axios.get(`${API_BASE}/api/category-banners`),
@@ -125,7 +125,7 @@ const AdminBannerUpload = () => {
       formData.append("hash", hash);
 
       try {
-        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+        await axios.post(`${API_BASE}/api/home-banners/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
         alert("Banner uploaded successfully");
@@ -184,7 +184,7 @@ const AdminBannerUpload = () => {
       formData.append("hash", hash)
       formData.append("title", selectedCategoryType)
       try {
-        await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+        await axios.post(`${API_BASE}/api/category-banners/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         })
         alert("Category banner uploaded successfully.")
@@ -235,7 +235,7 @@ const AdminBannerUpload = () => {
           formData.append("weightUnit", sizeMatch[2])
         }
         try {
-          const res = await axios.post(`${API_BASE}/api/banners/upload`, formData, {
+          const res = await axios.post(`${API_BASE}/api/product-type-banners/upload`, formData, {
             headers: { "Content-Type": "multipart/form-data" },
           })
           console.log(`Uploaded banner for ${product.title}`, res.data)
@@ -258,49 +258,77 @@ const AdminBannerUpload = () => {
   }
 
   const handleDelete = async (id) => {
+    if (!id) return;
     if (window.confirm("Are you sure you want to delete this banner?")) {
       try {
-        const url = type === "offerbanner"
-          ? `${API_BASE}/api/offer-banners/${id}` 
-          : `${API_BASE}/api/banners?type=${type}`     
-
-        const response = await axios.delete(url)
-
-        if (response.status === 200) {
-          alert("Banner deleted successfully")
-          fetchBanners()
+        let url;
+        if (type === "offerbanner") {
+          url = `${API_BASE}/api/offer-banners/${id}`;
+        } else if (type === "homebanner") {
+          url = `${API_BASE}/api/home-banners/${id}`;
+        } else if (type === "category") {
+          url = `${API_BASE}/api/category-banners/${id}`;
+        } else if (type === "product-type") {
+          url = `${API_BASE}/api/product-type-banners/${id}`;
         } else {
-          console.error("Unexpected response:", response)
-          alert("Failed to delete banner")
+          alert("Unknown banner type");
+          return;
+        }
+
+        const response = await axios.delete(url);
+        if (response.status === 200) {
+          alert("Banner deleted successfully");
+          fetchBanners();
+        } else {
+          console.error("Unexpected response:", response);
+          alert("Failed to delete banner");
         }
       } catch (err) {
-        console.error("Delete error:", err)
-        alert(err.response?.data?.message || "Failed to delete banner")
+        console.error("Delete error:", err);
+        alert(err.response?.data?.message || "Failed to delete banner");
       }
     }
-  }
+  };
 
   const handleDeleteAll = async () => {
-    const confirmMessage = type === "all"
-      ? "Are you sure you want to delete ALL banners?"
-      : `Delete all ${type === "homebanner" ? "Home Banners" : type === "category" ? "Category Banners" : type === "offerbanner" ? "Offer Banners" : "Product Type Banners"}?`
+    const confirmMessage =
+      type === "all"
+        ? "Are you sure you want to delete ALL banners?"
+        : `Delete all ${
+            type === "homebanner"
+              ? "Home Banners"
+              : type === "category"
+              ? "Category Banners"
+              : type === "offerbanner"
+              ? "Offer Banners"
+              : "Product Type Banners"
+          }?`;
 
     if (window.confirm(confirmMessage)) {
       try {
-        const url = type === "offerbanner"
-          ? `${API_BASE}/api/offer-banners`  // Offer banners delete all
-          : `${API_BASE}/api/banners${type !== "all" ? `?type=${type}` : ""}` // For other types or all
+        let url;
+        if (type === "offerbanner") {
+          url = `${API_BASE}/api/offer-banners`;
+        } else if (type === "homebanner") {
+          url = `${API_BASE}/api/home-banners`;
+        } else if (type === "category") {
+          url = `${API_BASE}/api/category-banners`;
+        } else if (type === "product-type") {
+          url = `${API_BASE}/api/product-type-banners`;
+        } else {
+          alert("Unknown banner type");
+          return;
+        }
 
-        const response = await axios.delete(url)
-
-        alert(response.data.message || "Banners deleted successfully")
-        fetchBanners()
+        const response = await axios.delete(url);
+        alert(response.data.message || "Banners deleted successfully");
+        fetchBanners();
       } catch (err) {
-        console.error("Delete all error:", err)
-        alert(err.response?.data?.message || "Failed to delete banners")
+        console.error("Delete all error:", err);
+        alert(err.response?.data?.message || "Failed to delete banners");
       }
     }
-  }
+  };
 
   const selectedProduct = getSelectedProduct()
   const selectedVariant = getSelectedVariant()
