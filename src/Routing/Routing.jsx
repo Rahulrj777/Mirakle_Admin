@@ -6,10 +6,10 @@ import SignUpPage from "../Componenets/SignUpPage";
 import AuthGuard from "../Componenets/AuthGuard";
 
 // Import all 4 banner components
-import HomeBanner from "../Pages/Banners/HomeBanner";
-import OfferBanner from "../Pages/Banners/OfferBanner";
-import CategoryBanner from "../Pages/Banners/CategoryBanner";
-import ProductTypeBanner from "../Pages/Banners/ProductTypeBanner";
+import HomeBanner from "../Banners/HomeBanner";
+import OfferBanner from "../Banners/OfferBanner";
+import CategoryBanner from "../Banners/CategoryBanner";
+import ProductTypeBanner from "../Banners/ProductTypeBanner";
 import AllBannersDisplay from "../Pages/AllBannersDisplay";
 
 const Routing = () => {

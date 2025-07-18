@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { API_BASE } from "../src/utils/api";
+import { API_BASE } from "../utils/api";
 
 const CategoryBanner = ({ fetchBanners, availableProductTypes }) => {
   const [title, setTitle] = useState("");
