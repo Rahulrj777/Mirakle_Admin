@@ -137,7 +137,8 @@ const AdminBannerUpload = () => {
         formData.append("title", selectedCategoryType)
       } else if (type === "offerbanner") {
         endpoint = `${API_BASE}/api/offer-banners/${editingBanner ? editingBanner._id : "upload"}`
-        if (!image && !editingBanner) {
+        if (!image && !editingBanner && !editingBanner?.imageUrl) {
+          // Ensure image exists for new or old
           alert("Please select an image for the Offer Zone Banner.")
           return
         }
