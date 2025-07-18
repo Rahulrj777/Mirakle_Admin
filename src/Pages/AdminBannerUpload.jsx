@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react" // Import useCallback
 import axios from "axios"
 import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
-  const [type, setType] = useState("homebanner")
+  // ✅ FIXED: Set initial type to "all" to show all banners by default
+  const [type, setType] = useState("all")
   const [banners, setBanners] = useState([])
   const [products, setProducts] = useState([])
   const [selectedProductIds, setSelectedProductIds] = useState([])
@@ -18,10 +19,28 @@ const AdminBannerUpload = () => {
   const [percentage, setPercentage] = useState("") // For offerbanner percentage
   const [offerSlot, setOfferSlot] = useState("") // For offerbanner slot
 
+  // ✅ NEW: Fetch banners and products on component mount and when type changes
   useEffect(() => {
     fetchBanners()
     fetchProducts()
-  }, [type]) // Re-fetch banners when type changes
+  }, []) // Run once on mount
+
+  // ✅ NEW: Reset image and related states when banner type changes
+  useEffect(() => {
+    setImage(null)
+    setTitle("")
+    setPercentage("")
+    setOfferSlot("")
+    setSelectedProductIds([])
+    setSelectedVariantIndex(0)
+    setProductSearchTerm("")
+    setSelectedCategoryType("")
+    // Re-fetch banners when type changes to update the filtered list
+    if (type !== "all") {
+      // Only re-fetch if we're switching to a specific upload type
+      fetchBanners()
+    }
+  }, [type])
 
   const fetchBanners = async () => {
     try {
@@ -56,6 +75,13 @@ const AdminBannerUpload = () => {
     setImage(file)
   }
 
+  // ✅ NEW: Function to clear the selected image
+  const clearImage = useCallback(() => {
+    setImage(null)
+    const fileInput = document.getElementById(`banner-file-${type}`)
+    if (fileInput) fileInput.value = ""
+  }, [type])
+
   const getSelectedProduct = () => products.find((p) => p._id === selectedProductIds[0]) || null
   const getSelectedVariant = () => getSelectedProduct()?.variants?.[selectedVariantIndex] || null
 
@@ -65,7 +91,7 @@ const AdminBannerUpload = () => {
 
   const handleUpload = async () => {
     if (type === "all") {
-      alert("Cannot upload when 'Show All' is selected")
+      alert("Cannot upload when 'Show All' is selected. Please choose a specific banner type to upload.")
       return
     }
 
@@ -74,48 +100,45 @@ const AdminBannerUpload = () => {
 
     if (type === "homebanner") {
       if (!image) {
-        alert("Please select an image")
+        alert("Please select an image for the Main Banner.")
         return
       }
       formData.append("image", image)
-      // No title needed for homebanner as per new backend logic
     } else if (type === "category") {
       if (!image) {
-        alert("Please select an image")
+        alert("Please select an image for the Category Banner.")
         return
       }
       if (!selectedCategoryType) {
         alert("Please select a category type.")
         return
       }
-      // ✅ NEW: Client-side check for duplicate category title
       if (banners.some((b) => b.type === "category" && b.title === selectedCategoryType)) {
         alert(`A banner for category '${selectedCategoryType}' already exists.`)
         return
       }
       formData.append("image", image)
-      formData.append("title", selectedCategoryType) // Title is the category name
+      formData.append("title", selectedCategoryType)
     } else if (type === "offerbanner") {
       if (!image) {
-        alert("Please select an image")
+        alert("Please select an image for the Offer Zone Banner.")
         return
       }
       if (!title.trim() || !percentage || !offerSlot) {
         alert("Please enter title, percentage, and select an offer slot.")
         return
       }
-      // ✅ NEW: Client-side check for duplicate offer slot
       if (banners.some((b) => b.type === "offerbanner" && b.slot === offerSlot)) {
         alert(`An offer banner for slot '${offerSlot}' already exists.`)
         return
       }
-      formData.append("title", title)
+      formData.append("title", title.trim())
       formData.append("percentage", percentage)
       formData.append("slot", offerSlot)
       formData.append("image", image)
     } else if (type === "product-type") {
       if (selectedProductIds.length === 0) {
-        alert("Please select at least one product")
+        alert("Please select at least one product.")
         return
       }
       let successCount = 0
@@ -128,13 +151,16 @@ const AdminBannerUpload = () => {
           variant = product?.variants?.[0]
         }
         if (!product || !variant) continue
-        const productImageUrl = product.images?.others?.[0] || ""
-        if (!productImageUrl) continue
 
-        // ✅ Existing: Client-side check for duplicate product-type banner for this product
+        const productImageUrl = product.images?.others?.[0] || ""
+        if (!productImageUrl) {
+          console.warn(`Skipping product ${product.title}: No image URL found.`)
+          continue
+        }
+
         if (banners.some((b) => b.type === "product-type" && b.productId === productId)) {
           console.warn(`Skipping upload for product ${product.title}: A banner for this product already exists.`)
-          continue // Skip this product if a banner already exists
+          continue
         }
 
         const discount = Number.parseFloat(variant.discountPercent) || 0
@@ -175,7 +201,8 @@ const AdminBannerUpload = () => {
       setSelectedVariantIndex(0)
       return
     }
-    alert("Unknown banner type")
+    // This 'else' block should ideally not be reached if all types are handled
+    alert("Unknown banner type selected. Please choose a valid banner type.")
   }
 
   const handleDelete = async (id) => {
@@ -227,6 +254,16 @@ const AdminBannerUpload = () => {
   const selectedVariant = getSelectedVariant()
   const filteredBanners = banners.filter((b) => type === "all" || b.type === type)
 
+  // Determine if the upload button should be enabled
+  const isUploadEnabled = (() => {
+    if (type === "all") return false // Cannot upload in "Show All" mode
+    if (type === "homebanner") return !!image
+    if (type === "category") return !!image && !!selectedCategoryType
+    if (type === "offerbanner") return !!image && !!title.trim() && !!percentage && !!offerSlot
+    if (type === "product-type") return selectedProductIds.length > 0
+    return false // Fallback for unknown types
+  })()
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-2xl font-bold mb-4">Admin Banner Upload Panel</h2>
@@ -254,7 +291,6 @@ const AdminBannerUpload = () => {
                 <label className="block text-sm font-medium mb-2">Select Products (Max 10):</label>
                 <div className="max-h-60 overflow-y-auto border rounded p-2">
                   {filteredProducts.map((product) => {
-                    // ✅ NEW: Disable checkbox if a product-type banner already exists for this product
                     const isProductBannerExisting = banners.some(
                       (b) => b.type === "product-type" && b.productId === product._id,
                     )
@@ -272,7 +308,7 @@ const AdminBannerUpload = () => {
                             const value = e.target.value
                             setSelectedVariantIndex(0)
                             setSelectedProductIds((prevIds) => {
-                              const maxSelections = 10 // Hardcoded limit for product-type
+                              const maxSelections = 10
                               if (checked) {
                                 if (prevIds.includes(value)) return prevIds
                                 if (prevIds.length >= maxSelections) {
@@ -285,7 +321,7 @@ const AdminBannerUpload = () => {
                               }
                             })
                           }}
-                          disabled={isProductBannerExisting} // Disable if banner exists
+                          disabled={isProductBannerExisting}
                           className="accent-green-600"
                         />
                         <span className="text-sm">
@@ -366,102 +402,80 @@ const AdminBannerUpload = () => {
             </div>
           )}
 
-          {type === "category" && (
+          {(type === "category" || type === "homebanner" || type === "offerbanner") && (
             <>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Select Category Type:</label>
-                <select
-                  value={selectedCategoryType}
-                  onChange={(e) => setSelectedCategoryType(e.target.value)}
-                  className="p-2 border w-full rounded"
-                >
-                  <option value="">Select a product category</option>
-                  {availableProductTypes.map((typeOption, index) => {
-                    // ✅ NEW: Disable option if a category banner already exists for this type
-                    const isCategoryBannerExisting = banners.some(
-                      (b) => b.type === "category" && b.title === typeOption,
-                    )
-                    return (
-                      <option key={index} value={typeOption} disabled={isCategoryBannerExisting}>
-                        {typeOption} {isCategoryBannerExisting && "(Banner Exists)"}
-                      </option>
-                    )
-                  })}
-                </select>
+              {type === "category" && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Select Category Type:</label>
+                  <select
+                    value={selectedCategoryType}
+                    onChange={(e) => setSelectedCategoryType(e.target.value)}
+                    className="p-2 border w-full rounded"
+                  >
+                    <option value="">Select a product category</option>
+                    {availableProductTypes.map((typeOption, index) => {
+                      const isCategoryBannerExisting = banners.some(
+                        (b) => b.type === "category" && b.title === typeOption,
+                      )
+                      return (
+                        <option key={index} value={typeOption} disabled={isCategoryBannerExisting}>
+                          {typeOption} {isCategoryBannerExisting && "(Banner Exists)"}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {type === "offerbanner" && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Enter Offer Title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="mb-4 p-2 border rounded w-full"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Discount Percentage (e.g., 50)"
+                    value={percentage}
+                    onChange={(e) => setPercentage(e.target.value)}
+                    className="mb-4 p-2 border rounded w-full"
+                  />
+                  <select
+                    value={offerSlot}
+                    onChange={(e) => setOfferSlot(e.target.value)}
+                    className="mb-4 p-2 border rounded w-full"
+                  >
+                    <option value="">Select Slot</option>
+                    <option value="left" disabled={banners.some((b) => b.type === "offerbanner" && b.slot === "left")}>
+                      Left Banner {banners.some((b) => b.type === "offerbanner" && b.slot === "left") && "(Exists)"}
+                    </option>
+                    <option
+                      value="right"
+                      disabled={banners.some((b) => b.type === "offerbanner" && b.slot === "right")}
+                    >
+                      Right Banner {banners.some((b) => b.type === "offerbanner" && b.slot === "right") && "(Exists)"}
+                    </option>
+                  </select>
+                </>
+              )}
+
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  id={`banner-file-${type}`}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
+                />
+                {image && (
+                  <button onClick={clearImage} className="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                    Clear Image
+                  </button>
+                )}
               </div>
-              <input
-                id={`banner-file-${type}`}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="mb-4"
-              />
-              {image && (
-                <img
-                  src={URL.createObjectURL(image) || "/placeholder.svg"}
-                  alt="Preview"
-                  className="mb-4 w-full h-64 object-cover rounded border"
-                />
-              )}
-            </>
-          )}
-
-          {type === "homebanner" && (
-            <>
-              <input
-                id={`banner-file-${type}`}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="mb-4"
-              />
-              {image && (
-                <img
-                  src={URL.createObjectURL(image) || "/placeholder.svg"}
-                  alt="Preview"
-                  className="mb-4 w-full h-64 object-cover rounded border"
-                />
-              )}
-            </>
-          )}
-
-          {type === "offerbanner" && (
-            <>
-              <input
-                type="text"
-                placeholder="Enter Offer Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mb-4 p-2 border rounded w-full"
-              />
-              <input
-                type="number"
-                placeholder="Discount Percentage (e.g., 50)"
-                value={percentage}
-                onChange={(e) => setPercentage(e.target.value)}
-                className="mb-4 p-2 border rounded w-full"
-              />
-              <select
-                value={offerSlot}
-                onChange={(e) => setOfferSlot(e.target.value)}
-                className="mb-4 p-2 border rounded w-full"
-              >
-                <option value="">Select Slot</option>
-                {/* ✅ NEW: Disable option if an offer banner already exists for this slot */}
-                <option value="left" disabled={banners.some((b) => b.type === "offerbanner" && b.slot === "left")}>
-                  50% Offer Zone {banners.some((b) => b.type === "offerbanner" && b.slot === "left") && "(Exists)"}
-                </option>
-                <option value="right" disabled={banners.some((b) => b.type === "offerbanner" && b.slot === "right")}>
-                  Speciel Offer Zone {banners.some((b) => b.type === "offerbanner" && b.slot === "right") && "(Exists)"}
-                </option>
-              </select>
-              <input
-                id={`banner-file-${type}`}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="mb-4"
-              />
               {image && (
                 <img
                   src={URL.createObjectURL(image) || "/placeholder.svg"}
@@ -474,13 +488,8 @@ const AdminBannerUpload = () => {
 
           <button
             onClick={() => setTimeout(handleUpload, 100)}
-            className={`px-4 py-2 rounded text-white ${
-              ((type === "homebanner" || type === "category") && image) ||
-              (type === "offerbanner" && image && title && percentage && offerSlot) ||
-              (type === "product-type" && selectedProductIds.length > 0)
-                ? "bg-green-600 hover:bg-green-700"
-                : "bg-gray-400 cursor-not-allowed"
-            }`}
+            className={`px-4 py-2 rounded text-white ${isUploadEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
+            disabled={!isUploadEnabled}
           >
             Upload Banner
           </button>
@@ -517,7 +526,9 @@ const AdminBannerUpload = () => {
                 {banner.discountPercent}% OFF
               </span>
             )}
-            {banner.title && <div className="text-sm text-center font-medium mt-1">{banner.title}</div>}
+            <div className="text-sm text-center font-medium mt-1">
+              {banner.title || `(${banner.type.replace("banner", " Banner")})`}
+            </div>
             {banner.price > 0 && (
               <div className="text-center text-sm mt-1">
                 <span className="text-green-700 font-semibold">₹ {Number(banner.price).toFixed(0)}</span>
