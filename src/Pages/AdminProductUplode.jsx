@@ -60,7 +60,13 @@ export default function AdminProductUpload() {
   }
 
   const handleImageRemove = (publicId) => {
-    setRemovedImages((prev) => [...prev, publicId])
+    // Only add to removedImages if publicId is a valid string
+    if (typeof publicId === "string" && publicId.length > 0) {
+      setRemovedImages((prev) => [...prev, publicId])
+    } else {
+      console.warn("Attempted to remove an image without a valid public_id:", publicId)
+    }
+    // Always remove from existingImages state to update UI
     setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
   }
 
@@ -268,9 +274,11 @@ export default function AdminProductUpload() {
       })
       .filter(Boolean)
     setVariants(parsedVariants)
-    setImages([])
-    setExistingImages(product.images?.others || [])
-    setRemovedImages([])
+    setImages([]) // Clear new images input
+    // Filter existing images: only include those that have a public_id
+    // This assumes images without public_id are old local files not managed by Cloudinary
+    setExistingImages(product.images?.others?.filter((img) => img.public_id) || [])
+    setRemovedImages([]) // Clear removed images state
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
     setDescription(product.description || "")
     setKeywordsList(product.keywords || [])
@@ -506,12 +514,15 @@ export default function AdminProductUpload() {
                 alt={`Existing image ${i}`}
                 className="w-full h-24 object-cover rounded"
               />
-              <button
-                onClick={() => handleImageRemove(img.public_id)}
-                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
-              >
-                X
-              </button>
+              {/* Only show remove button if public_id exists */}
+              {img.public_id && (
+                <button
+                  onClick={() => handleImageRemove(img.public_id)}
+                  className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
+                >
+                  X
+                </button>
+              )}
             </div>
           ))}
         </div>
