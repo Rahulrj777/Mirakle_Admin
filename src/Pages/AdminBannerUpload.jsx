@@ -489,11 +489,14 @@ const AdminBannerUpload = () => {
                   <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
                   <div className="flex gap-3">
                     {selectedProduct.images?.others?.[0] && (
-                      <img
-                        src={selectedProduct.images.others[0]}
-                        alt={selectedProduct.title}
-                        className="w-16 h-16 object-cover rounded"
-                      />
+                      <>
+                        {console.log("🖼️ Product Image URL:", selectedProduct.images.others[0])}
+                        <img
+                          src={selectedProduct.images.others[0]}
+                          alt={selectedProduct.title}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      </>
                     )}
                     <div className="text-sm">
                       <p className="font-medium">{selectedProduct.title}</p>
