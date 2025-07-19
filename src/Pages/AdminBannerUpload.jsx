@@ -490,7 +490,7 @@ const AdminBannerUpload = () => {
                   <div className="flex gap-3">
                     {selectedProduct.images?.others?.[0] && (
                       <img
-                        src={`${API_BASE}${selectedProduct.images.others[0]}`}
+                        src={selectedProduct.images.others[0]}
                         alt={selectedProduct.title}
                         className="w-16 h-16 object-cover rounded"
                       />
@@ -516,7 +516,7 @@ const AdminBannerUpload = () => {
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
                         {product.images?.others?.[0] && (
                           <img
-                            src={`${API_BASE}${product.images.others[0]}`}
+                            src={product.images.others[0]}
                             alt={product.title}
                             className="w-16 h-16 object-cover rounded"
                           />
@@ -749,7 +749,7 @@ const AdminBannerUpload = () => {
                 alt="Preview"
                 className="mb-4 w-full h-64 object-cover rounded border"
               />
-            )}
+          )}
 
           <button
             onClick={handleUpload}
