@@ -1,4 +1,3 @@
-"use client"
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -8,9 +7,9 @@ export default function AdminProductUpload() {
   const [variants, setVariants] = useState([
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
-  const [images, setImages] = useState([]) // For new files to upload
-  const [existingImages, setExistingImages] = useState([]) // For images already on Cloudinary
-  const [removedImages, setRemovedImages] = useState([]) // Stores public_ids to remove
+  const [images, setImages] = useState([])
+  const [existingImages, setExistingImages] = useState([])
+  const [removedImages, setRemovedImages] = useState([])
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
