@@ -9,8 +9,10 @@ export default function AdminProductUpload() {
   const [variants, setVariants] = useState([
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
-  const [images, setImages] = useState([])
+  const [images, setImages] = useState([]) // For new files to upload
+  // ✅ MODIFIED: existingImages now stores objects { url: string, public_id: string }
   const [existingImages, setExistingImages] = useState([])
+  // ✅ MODIFIED: removedImages now stores public_ids
   const [removedImages, setRemovedImages] = useState([])
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
@@ -19,9 +21,7 @@ export default function AdminProductUpload() {
   const [description, setDescription] = useState("")
   const [keywords, setKeywords] = useState("")
   const [keywordsList, setKeywordsList] = useState([])
-  // ✅ productType will now store the string name of the selected type
   const [productType, setProductType] = useState("")
-  // ✅ Dynamically populated from existing products
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
 
@@ -33,7 +33,6 @@ export default function AdminProductUpload() {
     try {
       const res = await axios.get(`${API_BASE}/api/products/all-products`)
       setProducts(res.data)
-      // Extract unique product types from fetched products
       const uniqueTypes = [...new Set(res.data.map((p) => p.productType).filter(Boolean))].sort()
       setAvailableProductTypes(uniqueTypes)
     } catch (err) {
@@ -52,7 +51,7 @@ export default function AdminProductUpload() {
     setDescription("")
     setKeywords("")
     setKeywordsList([])
-    setProductType("") // Reset product type selection
+    setProductType("")
     const fileInput = document.getElementById("product-images")
     if (fileInput) fileInput.value = ""
   }
@@ -63,9 +62,10 @@ export default function AdminProductUpload() {
     }
   }
 
-  const handleImageRemove = (imgPath) => {
-    setRemovedImages((prev) => [...prev, imgPath])
-    setExistingImages((prev) => prev.filter((img) => img !== imgPath))
+  // ✅ MODIFIED: handleImageRemove now takes the public_id
+  const handleImageRemove = (publicId) => {
+    setRemovedImages((prev) => [...prev, publicId])
+    setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
   }
 
   const removeNewImage = (index) => {
@@ -146,12 +146,11 @@ export default function AdminProductUpload() {
     setKeywordsList(copy)
   }
 
-  // ✅ Updated: Add product type locally and set it as selected
   const handleAddProductType = () => {
     const newType = newProductTypeInput.trim()
     if (newType && !availableProductTypes.includes(newType)) {
       setAvailableProductTypes((prev) => [...prev, newType].sort())
-      setProductType(newType) // Automatically select the newly added type
+      setProductType(newType)
       setNewProductTypeInput("")
       alert(`Product type "${newType}" added to dropdown. Save a product to persist it.`)
     } else if (newType && availableProductTypes.includes(newType)) {
@@ -168,6 +167,11 @@ export default function AdminProductUpload() {
     }
     if (!productType) {
       alert("Please select a product type.")
+      return
+    }
+    // ✅ NEW: Check if there are any images (new or existing)
+    if (images.length === 0 && existingImages.length === 0) {
+      alert("Please upload at least one image for the product.")
       return
     }
 
@@ -191,14 +195,14 @@ export default function AdminProductUpload() {
     formData.append("description", description)
     formData.append("details", JSON.stringify(detailsObject))
     formData.append("keywords", JSON.stringify(keywordsList))
-    formData.append("productType", productType) // ✅ Append productType string
-    images.forEach((img) => formData.append("images", img))
+    formData.append("productType", productType)
+    images.forEach((img) => formData.append("images", img)) // Append new image files
 
     const token = localStorage.getItem("authToken")
 
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)
-    console.log("Product Type:", productType) // Log product type string
+    console.log("Product Type:", productType)
     console.log("Variants:", preparedVariants)
     console.log("Description:", description)
     console.log("Details:", detailsObject)
@@ -208,7 +212,7 @@ export default function AdminProductUpload() {
 
     if (editingProduct) {
       console.log("Editing Product ID:", editingProduct._id)
-      formData.append("removedImages", JSON.stringify(removedImages))
+      formData.append("removedImages", JSON.stringify(removedImages)) // Send public_ids to remove
     }
     console.log("Token:", token ? "Present" : "Missing")
     console.log("-----------------------------")
@@ -240,7 +244,7 @@ export default function AdminProductUpload() {
         console.log("🟢 Uploaded:", res.data)
       }
       resetForm()
-      fetchProducts() // Re-fetch products to update the available product types list
+      fetchProducts()
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
       alert(err.response?.data?.message || "Operation failed")
@@ -250,7 +254,6 @@ export default function AdminProductUpload() {
   const handleEdit = (product) => {
     setEditingProduct(product)
     setName(product.title)
-    // ✅ Set productType to the string name
     setProductType(product.productType || "")
     const parsedVariants = product.variants
       .map((v) => {
@@ -268,7 +271,8 @@ export default function AdminProductUpload() {
       })
       .filter(Boolean)
     setVariants(parsedVariants)
-    setImages([])
+    setImages([]) // Clear new images when editing
+    // ✅ MODIFIED: Set existingImages with the new object structure
     setExistingImages(product.images?.others || [])
     setRemovedImages([])
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
@@ -285,7 +289,7 @@ export default function AdminProductUpload() {
         headers: { Authorization: `Bearer ${token}` },
       })
       alert("Product deleted successfully")
-      fetchProducts() // Re-fetch products to update the available product types list
+      fetchProducts()
     } catch (err) {
       console.error("Delete failed:", err.response?.data || err.message)
       alert(err.response?.data?.message || "Delete failed")
@@ -394,7 +398,6 @@ export default function AdminProductUpload() {
               </option>
             ))}
           </select>
-          {/* ✅ New: Add Product Type Input (local management) */}
           <div className="mt-4 flex gap-2">
             <input
               type="text"
@@ -408,7 +411,6 @@ export default function AdminProductUpload() {
               Add Type
             </button>
           </div>
-          {/* ❌ Removed: Delete Product Type functionality as it's not persisted separately */}
         </div>
 
         {/* Keywords Section */}
@@ -506,9 +508,15 @@ export default function AdminProductUpload() {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
             <div key={i} className="relative">
-              <img src={`${API_BASE}${img}`} alt={`Existing image ${i}`} className="w-full h-24 object-cover rounded" />
+              {/* ✅ MODIFIED: Use img.url for existing images */}
+              <img
+                src={img.url || "/placeholder.svg"}
+                alt={`Existing image ${i}`}
+                className="w-full h-24 object-cover rounded"
+              />
+              {/* ✅ MODIFIED: Pass img.public_id to handleImageRemove */}
               <button
-                onClick={() => handleImageRemove(img)}
+                onClick={() => handleImageRemove(img.public_id)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
               >
                 X
@@ -542,17 +550,17 @@ export default function AdminProductUpload() {
           .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
           .map((product) => (
             <div key={product._id} className="border p-4 rounded shadow">
+              {/* ✅ MODIFIED: Use product.images.others[0].url */}
               <img
                 src={
-                  product?.images?.others?.[0]
-                    ? `${API_BASE}${product.images.others[0]}`
+                  product?.images?.others?.[0]?.url
+                    ? product.images.others[0].url
                     : "/placeholder.svg?height=150&width=150"
                 }
                 alt={product.title}
                 className="w-full h-40 object-cover mb-2 rounded"
               />
               <h3 className="text-lg font-bold">{product.title}</h3>
-              {/* ✅ Display Product Type Name (string) */}
               {product.productType && (
                 <p className="text-sm text-gray-700 mb-1">
                   <span className="font-semibold">Type:</span> {product.productType}
