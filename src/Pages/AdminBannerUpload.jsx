@@ -133,8 +133,8 @@ const AdminBannerUpload = () => {
           alert("Please select an image for the Offer Zone Banner.")
           return
         }
-        if (!title.trim() || !offerSlot) {
-          alert("Please enter title and select an offer slot.")
+        if (!title.trim() || percentage === "" || !offerSlot) {
+          alert("Please enter title, percentage, and select an offer slot.")
           return
         }
         if (image) formData.append("image", image)
@@ -490,7 +490,7 @@ const AdminBannerUpload = () => {
                   <div className="flex gap-3">
                     {selectedProduct.images?.others?.[0] && (
                       <img
-                        src={selectedProduct.images.others[0]}
+                        src={`${API_BASE}${selectedProduct.images.others[0]}`}
                         alt={selectedProduct.title}
                         className="w-16 h-16 object-cover rounded"
                       />
@@ -516,7 +516,7 @@ const AdminBannerUpload = () => {
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
                         {product.images?.others?.[0] && (
                           <img
-                            src={product.images.others[0]}
+                            src={`${API_BASE}${product.images.others[0]}`}
                             alt={product.title}
                             className="w-16 h-16 object-cover rounded"
                           />
