@@ -19,11 +19,12 @@ const AdminBannerUpload = () => {
   const [offerSlot, setOfferSlot] = useState("") // For offerbanner slot
   const [availableProductTypes, setAvailableProductTypes] = useState([])
 
-  // ✅ NEW: State for offer banner linking
-  const [offerLinkType, setOfferLinkType] = useState("none") // 'none', 'product', 'category'
+  // ✅ UPDATED: State for offer banner linking
+  const [offerLinkType, setOfferLinkType] = useState("none") // 'none', 'product', 'category', 'discount', 'url'
   const [linkedProductForOffer, setLinkedProductForOffer] = useState(null) // Stores selected product object
   const [linkedCategoryForOffer, setLinkedCategoryForOffer] = useState("") // Stores selected category string
-  const [linkedDiscountUpToForOffer, setLinkedDiscountUpToForOffer] = useState("") // Stores discount % for offer banner link
+  const [linkedDiscountValueForOffer, setLinkedDiscountValueForOffer] = useState("") // Stores discount % for 'discount' type
+  const [linkedUrlForOffer, setLinkedUrlForOffer] = useState("") // Stores URL for 'url' type
 
   const [editingBanner, setEditingBanner] = useState(null) // Holds the banner object being edited
 
@@ -45,7 +46,8 @@ const AdminBannerUpload = () => {
     setOfferLinkType("none")
     setLinkedProductForOffer(null)
     setLinkedCategoryForOffer("")
-    setLinkedDiscountUpToForOffer("")
+    setLinkedDiscountValueForOffer("")
+    setLinkedUrlForOffer("")
     setEditingBanner(null) // Clear editing state
     const fileInput = document.getElementById(`banner-file-${type}`)
     if (fileInput) fileInput.value = "" // Clear file input
@@ -151,16 +153,17 @@ const AdminBannerUpload = () => {
         formData.append("title", title.trim())
         formData.append("percentage", percentage)
         formData.append("slot", offerSlot)
+        formData.append("offerLinkType", offerLinkType) // Send the selected link type
 
-        // Add linking data
+        // ✅ UPDATED: Add linking data based on offerLinkType
         if (offerLinkType === "product" && linkedProductForOffer) {
           formData.append("linkedProductId", linkedProductForOffer._id)
         } else if (offerLinkType === "category" && linkedCategoryForOffer) {
           formData.append("linkedCategory", linkedCategoryForOffer)
-        }
-        if (linkedDiscountUpToForOffer !== "") {
-          // Only append if it has a value
-          formData.append("linkedDiscountUpTo", linkedDiscountUpToForOffer)
+        } else if (offerLinkType === "discount" && linkedDiscountValueForOffer !== "") {
+          formData.append("linkedDiscountUpTo", linkedDiscountValueForOffer)
+        } else if (offerLinkType === "url" && linkedUrlForOffer) {
+          formData.append("linkedUrl", linkedUrlForOffer)
         }
       } else if (type === "product-type") {
         if (selectedProductIds.length === 0) {
@@ -178,7 +181,8 @@ const AdminBannerUpload = () => {
           }
           if (!product || !variant) continue
 
-          const productImageUrl = product.images?.others?.[0] || ""
+          // ✅ FIX: Use product's main image URL from Cloudinary
+          const productImageUrl = product.images?.main?.url || product.images?.others?.[0]?.url || ""
           if (!productImageUrl) {
             console.warn(`Skipping product ${product.title}: No image URL found.`)
             continue
@@ -195,7 +199,7 @@ const AdminBannerUpload = () => {
           const productFormData = new FormData()
           productFormData.append("type", type)
           productFormData.append("productId", productId)
-          productFormData.append("productImageUrl", productImageUrl)
+          productFormData.append("productImageUrl", productImageUrl) // Send Cloudinary URL
           productFormData.append("title", product.title)
           productFormData.append("price", price.toFixed(2))
           productFormData.append("oldPrice", oldPrice.toFixed(2))
@@ -314,30 +318,53 @@ const AdminBannerUpload = () => {
     }
   }
 
-  // ✅ NEW: Handle Edit for any banner type
+  // ✅ UPDATED: Handle Edit for any banner type
   const handleEdit = (banner) => {
     setEditingBanner(banner)
     setType(banner.type) // Set the dropdown to the banner's type
 
     // Populate common fields
     setTitle(banner.title || "")
+    setPercentage(banner.percentage === undefined ? "" : String(banner.percentage)) // Handle 0 correctly
     setImage(null) // Clear image input, user can re-upload if needed
 
     // Populate type-specific fields
     if (banner.type === "category") {
       setSelectedCategoryType(banner.title || "")
     } else if (banner.type === "offerbanner") {
-      setPercentage(banner.percentage === undefined ? "" : String(banner.percentage)) // Handle 0 correctly
       setOfferSlot(banner.slot || "")
-      setLinkedDiscountUpToForOffer(banner.linkedDiscountUpTo === undefined ? "" : String(banner.linkedDiscountUpTo)) // Handle 0 correctly
+
+      // Determine offerLinkType and populate corresponding state
       if (banner.linkedProductId) {
         setOfferLinkType("product")
         setLinkedProductForOffer(products.find((p) => p._id === banner.linkedProductId) || null)
+        setLinkedCategoryForOffer("")
+        setLinkedDiscountValueForOffer("")
+        setLinkedUrlForOffer("")
       } else if (banner.linkedCategory) {
         setOfferLinkType("category")
         setLinkedCategoryForOffer(banner.linkedCategory)
+        setLinkedProductForOffer(null)
+        setLinkedDiscountValueForOffer("")
+        setLinkedUrlForOffer("")
+      } else if (banner.linkedDiscountUpTo !== undefined && banner.linkedDiscountUpTo !== null) {
+        setOfferLinkType("discount")
+        setLinkedDiscountValueForOffer(String(banner.linkedDiscountUpTo))
+        setLinkedProductForOffer(null)
+        setLinkedCategoryForOffer("")
+        setLinkedUrlForOffer("")
+      } else if (banner.linkedUrl) {
+        setOfferLinkType("url")
+        setLinkedUrlForOffer(banner.linkedUrl)
+        setLinkedProductForOffer(null)
+        setLinkedCategoryForOffer("")
+        setLinkedDiscountValueForOffer("")
       } else {
         setOfferLinkType("none")
+        setLinkedProductForOffer(null)
+        setLinkedCategoryForOffer("")
+        setLinkedDiscountValueForOffer("")
+        setLinkedUrlForOffer("")
       }
     } else if (banner.type === "product-type") {
       setSelectedProductIds([banner.productId])
@@ -350,6 +377,7 @@ const AdminBannerUpload = () => {
   const allCombinedBanners = [...banners, ...offerBanners]
   const filteredBanners = allCombinedBanners.filter((b) => type === "all" || b.type === type)
 
+  // ✅ UPDATED: isUploadEnabled logic for offerbanner
   const isUploadEnabled = (() => {
     if (type === "all") return false
 
@@ -368,32 +396,22 @@ const AdminBannerUpload = () => {
       const isPercentageValid = !isNaN(Number(percentage)) && Number(percentage) >= 0 && Number(percentage) <= 100
       const hasOfferSlot = !!offerSlot
 
-      let isLinkDataValid = true // Assume valid unless proven otherwise
-      if (offerLinkType === "product") {
+      let isLinkDataValid = false // Start as false, prove it true
+
+      if (offerLinkType === "none") {
+        isLinkDataValid = true
+      } else if (offerLinkType === "product") {
         isLinkDataValid = !!linkedProductForOffer
       } else if (offerLinkType === "category") {
         isLinkDataValid = !!linkedCategoryForOffer
+      } else if (offerLinkType === "discount") {
+        const discountVal = Number(linkedDiscountValueForOffer)
+        isLinkDataValid = !isNaN(discountVal) && discountVal >= 0 && discountVal <= 100
+      } else if (offerLinkType === "url") {
+        isLinkDataValid = !!linkedUrlForOffer // Check if URL is provided
       }
 
-      let isDiscountUpToValid = true // Assume valid unless proven otherwise
-      if (linkedDiscountUpToForOffer !== "") {
-        const discountVal = Number(linkedDiscountUpToForOffer)
-        isDiscountUpToValid = !isNaN(discountVal) && discountVal >= 0 && discountVal <= 100
-        // If a discount value is provided AND it's greater than 0, a link type must be selected
-        if (isDiscountUpToValid && discountVal > 0 && offerLinkType === "none") {
-          isDiscountUpToValid = false
-        }
-      }
-
-      return (
-        hasImage &&
-        hasTitle &&
-        hasPercentage &&
-        isPercentageValid &&
-        hasOfferSlot &&
-        isLinkDataValid &&
-        isDiscountUpToValid
-      )
+      return hasImage && hasTitle && hasPercentage && isPercentageValid && hasOfferSlot && isLinkDataValid
     }
 
     if (type === "product-type") {
@@ -502,9 +520,10 @@ const AdminBannerUpload = () => {
                 <div className="bg-gray-50 p-3 rounded border">
                   <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
                   <div className="flex gap-3">
-                    {selectedProduct.images?.others?.[0] && (
+                    {/* ✅ FIX: Use product's main image for preview */}
+                    {(selectedProduct.images?.main?.url || selectedProduct.images?.others?.[0]?.url) && (
                       <img
-                        src={`${API_BASE}${selectedProduct.images.others[0]}`}
+                        src={selectedProduct.images.main?.url || selectedProduct.images.others[0].url}
                         alt={selectedProduct.title}
                         className="w-16 h-16 object-cover rounded"
                       />
@@ -528,9 +547,10 @@ const AdminBannerUpload = () => {
                     if (!product || !variant) return null
                     return (
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
-                        {product.images?.others?.[0] && (
+                        {/* ✅ FIX: Use product's main image for preview */}
+                        {(product.images?.main?.url || product.images?.others?.[0]?.url) && (
                           <img
-                            src={`${API_BASE}${product.images.others[0]}`}
+                            src={product.images.main?.url || product.images.others[0].url}
                             alt={product.title}
                             className="w-16 h-16 object-cover rounded"
                           />
@@ -622,10 +642,10 @@ const AdminBannerUpload = () => {
                 </option>
               </select>
 
-              {/* ✅ NEW: Offer Banner Linking Options */}
+              {/* ✅ UPDATED: Offer Banner Linking Options */}
               <div className="mb-4 p-3 border rounded bg-gray-50">
                 <label className="block text-sm font-medium mb-2">Link Offer Banner To:</label>
-                <div className="flex gap-4 mb-3">
+                <div className="flex flex-wrap gap-4 mb-3">
                   <label className="flex items-center">
                     <input
                       type="radio"
@@ -635,7 +655,8 @@ const AdminBannerUpload = () => {
                         setOfferLinkType("none")
                         setLinkedProductForOffer(null)
                         setLinkedCategoryForOffer("")
-                        setLinkedDiscountUpToForOffer("") // Clear discount if no link
+                        setLinkedDiscountValueForOffer("")
+                        setLinkedUrlForOffer("")
                       }}
                       className="mr-2 accent-green-600"
                     />
@@ -649,6 +670,8 @@ const AdminBannerUpload = () => {
                       onChange={() => {
                         setOfferLinkType("product")
                         setLinkedCategoryForOffer("")
+                        setLinkedDiscountValueForOffer("")
+                        setLinkedUrlForOffer("")
                       }}
                       className="mr-2 accent-green-600"
                     />
@@ -662,10 +685,42 @@ const AdminBannerUpload = () => {
                       onChange={() => {
                         setOfferLinkType("category")
                         setLinkedProductForOffer(null)
+                        setLinkedDiscountValueForOffer("")
+                        setLinkedUrlForOffer("")
                       }}
                       className="mr-2 accent-green-600"
                     />
                     Product Category
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="discount"
+                      checked={offerLinkType === "discount"}
+                      onChange={() => {
+                        setOfferLinkType("discount")
+                        setLinkedProductForOffer(null)
+                        setLinkedCategoryForOffer("")
+                        setLinkedUrlForOffer("")
+                      }}
+                      className="mr-2 accent-green-600"
+                    />
+                    Offer (Discount % up to)
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="url"
+                      checked={offerLinkType === "url"}
+                      onChange={() => {
+                        setOfferLinkType("url")
+                        setLinkedProductForOffer(null)
+                        setLinkedCategoryForOffer("")
+                        setLinkedDiscountValueForOffer("")
+                      }}
+                      className="mr-2 accent-green-600"
+                    />
+                    External URL
                   </label>
                 </div>
 
@@ -719,21 +774,37 @@ const AdminBannerUpload = () => {
                   </div>
                 )}
 
-                {(offerLinkType === "product" || offerLinkType === "category") && (
+                {offerLinkType === "discount" && (
                   <div className="mb-3">
                     <label className="block text-sm font-medium mb-1">Discount Up To (%):</label>
                     <input
                       type="number"
-                      placeholder="e.g., 25 (optional)"
-                      value={linkedDiscountUpToForOffer}
-                      onChange={(e) => setLinkedDiscountUpToForOffer(e.target.value)}
+                      placeholder="e.g., 25"
+                      value={linkedDiscountValueForOffer}
+                      onChange={(e) => setLinkedDiscountValueForOffer(e.target.value)}
                       className="p-2 border w-full rounded"
                       min="0"
                       max="100"
+                      required // Required if this link type is chosen
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      If set, clicking the banner will filter products with up to this discount.
+                      Clicking the banner will filter products with up to this discount.
                     </p>
+                  </div>
+                )}
+
+                {offerLinkType === "url" && (
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium mb-1">External URL:</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/offer"
+                      value={linkedUrlForOffer}
+                      onChange={(e) => setLinkedUrlForOffer(e.target.value)}
+                      className="p-2 border w-full rounded"
+                      required // Required if this link type is chosen
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Clicking the banner will open this URL in a new tab.</p>
                   </div>
                 )}
               </div>
@@ -842,6 +913,9 @@ const AdminBannerUpload = () => {
             )}
             {banner.linkedDiscountUpTo > 0 && (
               <div className="text-red-500 text-center text-xs mt-1">Up to {banner.linkedDiscountUpTo}% Discount</div>
+            )}
+            {banner.linkedUrl && (
+              <div className="text-gray-600 text-center text-xs mt-1">Linked URL: {banner.linkedUrl}</div>
             )}
             <div className="mt-3 text-center flex justify-center gap-2">
               <button
