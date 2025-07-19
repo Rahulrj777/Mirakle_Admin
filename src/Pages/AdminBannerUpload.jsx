@@ -133,7 +133,7 @@ const AdminBannerUpload = () => {
           alert("Please select an image for the Offer Zone Banner.")
           return
         }
-        if (!title.trim() || percentage === "" || !offerSlot) {
+        if (!title.trim() || !offerSlot) {
           alert("Please enter title, percentage, and select an offer slot.")
           return
         }
