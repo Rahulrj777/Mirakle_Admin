@@ -512,6 +512,8 @@ const AdminBannerUpload = () => {
                     const product = products.find((p) => p._id === productId)
                     const variant = product?.variants?.[0]
                     if (!product || !variant) return null
+                    console.log("🖼️ Product Image Object:", product.images?.others?.[0]);
+
                     return (
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
                         {product.images?.others?.[0]?.url && (
