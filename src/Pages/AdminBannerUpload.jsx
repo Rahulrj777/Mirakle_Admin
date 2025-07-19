@@ -133,12 +133,13 @@ const AdminBannerUpload = () => {
           alert("Please select an image for the Offer Zone Banner.")
           return
         }
-        if (!title.trim() || !offerSlot) {
-          alert("Please enter title and select an offer slot.")
+        if (!title.trim() || percentage === "" || !offerSlot) {
+          alert("Please enter title, percentage, and select an offer slot.")
           return
         }
         if (image) formData.append("image", image)
         formData.append("title", title.trim())
+        formData.append("percentage", percentage)
         formData.append("slot", offerSlot)
 
         if (offerLinkType === "product" && linkedProductForOffer) {
@@ -312,9 +313,9 @@ const AdminBannerUpload = () => {
     if (banner.type === "category") {
       setSelectedCategoryType(banner.title || "")
     } else if (banner.type === "offerbanner") {
-      setPercentage(banner.percentage === undefined ? "" : String(banner.percentage)) 
+      setPercentage(banner.percentage === undefined ? "" : String(banner.percentage)) // Handle 0 correctly
       setOfferSlot(banner.slot || "")
-      setLinkedDiscountUpToForOffer(banner.linkedDiscountUpTo === undefined ? "" : String(banner.linkedDiscountUpTo))
+      setLinkedDiscountUpToForOffer(banner.linkedDiscountUpTo === undefined ? "" : String(banner.linkedDiscountUpTo)) // Handle 0 correctly
       if (banner.linkedProductId) {
         setOfferLinkType("product")
         setLinkedProductForOffer(products.find((p) => p._id === banner.linkedProductId) || null)
@@ -349,7 +350,7 @@ const AdminBannerUpload = () => {
     if (type === "offerbanner") {
       const hasImage = !!image || (editingBanner && editingBanner.imageUrl)
       const hasTitle = !!title.trim()
-      const hasPercentage = percentage !== "" 
+      const hasPercentage = percentage !== "" // Allow 0, but not empty string
       const isPercentageValid = !isNaN(Number(percentage)) && Number(percentage) >= 0 && Number(percentage) <= 100
       const hasOfferSlot = !!offerSlot
 
