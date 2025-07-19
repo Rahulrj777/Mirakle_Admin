@@ -9,10 +9,8 @@ export default function AdminProductUpload() {
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
   const [images, setImages] = useState([]) // For new files to upload
-  // ✅ MODIFIED: existingImages now stores objects { url, public_id }
   const [existingImages, setExistingImages] = useState([]) // For images already on Cloudinary
-  // ✅ MODIFIED: removedImages now stores public_ids
-  const [removedImages, setRemovedImages] = useState([])
+  const [removedImages, setRemovedImages] = useState([]) // Stores public_ids to remove
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -61,7 +59,6 @@ export default function AdminProductUpload() {
     }
   }
 
-  // ✅ MODIFIED: handleImageRemove now takes public_id
   const handleImageRemove = (publicId) => {
     setRemovedImages((prev) => [...prev, publicId])
     setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
@@ -168,7 +165,6 @@ export default function AdminProductUpload() {
       alert("Please select a product type.")
       return
     }
-    // ✅ MODIFIED: Check if there are any images (new or existing)
     if (images.length === 0 && existingImages.length === 0) {
       alert("Please upload at least one image for the product.")
       return
@@ -196,10 +192,8 @@ export default function AdminProductUpload() {
     formData.append("keywords", JSON.stringify(keywordsList))
     formData.append("productType", productType)
 
-    // Append new image files
     images.forEach((img) => formData.append("images", img))
 
-    // Append public_ids of removed images
     if (removedImages.length > 0) {
       formData.append("removedImages", JSON.stringify(removedImages))
     }
@@ -275,7 +269,6 @@ export default function AdminProductUpload() {
       .filter(Boolean)
     setVariants(parsedVariants)
     setImages([])
-    // ✅ MODIFIED: Set existingImages with the full image objects (url, public_id)
     setExistingImages(product.images?.others || [])
     setRemovedImages([])
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
@@ -400,7 +393,6 @@ export default function AdminProductUpload() {
               </option>
             ))}
           </select>
-          {/* New: Add Product Type Input (local management) */}
           <div className="mt-4 flex gap-2">
             <input
               type="text"
@@ -509,14 +501,12 @@ export default function AdminProductUpload() {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
             <div key={i} className="relative">
-              {/* ✅ MODIFIED: Use img.url for existing images */}
               <img
                 src={img.url || "/placeholder.svg"}
                 alt={`Existing image ${i}`}
                 className="w-full h-24 object-cover rounded"
               />
               <button
-                // ✅ MODIFIED: Pass img.public_id for removal
                 onClick={() => handleImageRemove(img.public_id)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
               >
@@ -551,7 +541,6 @@ export default function AdminProductUpload() {
           .map((product) => (
             <div key={product._id} className="border p-4 rounded shadow">
               <img
-                // ✅ MODIFIED: Use product.images.others[0].url for display
                 src={
                   product?.images?.others?.[0]?.url
                     ? product.images.others[0].url
