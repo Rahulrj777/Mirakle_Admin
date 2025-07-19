@@ -1,608 +1,420 @@
 "use client"
-import { useState, useEffect } from "react"
+
+import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
+import { useParams, useNavigate } from "react-router-dom"
 import { API_BASE } from "../utils/api"
 
 export default function AdminProductUpload() {
-  const [name, setName] = useState("")
-  const [variants, setVariants] = useState([
-    { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
-  ])
-  const [images, setImages] = useState([]) // For new files to upload
-  const [existingImages, setExistingImages] = useState([]) // For images already on Cloudinary
-  const [removedImages, setRemovedImages] = useState([]) // Stores public_ids to remove
-  const [products, setProducts] = useState([])
-  const [editingProduct, setEditingProduct] = useState(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [detailsList, setDetailsList] = useState([{ key: "", value: "" }])
+  const { id } = useParams() // For editing existing product
+  const navigate = useNavigate()
+
+  const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [keywords, setKeywords] = useState("")
-  const [keywordsList, setKeywordsList] = useState([])
   const [productType, setProductType] = useState("")
-  const [availableProductTypes, setAvailableProductTypes] = useState([])
-  const [newProductTypeInput, setNewProductTypeInput] = useState("")
+  const [category, setCategory] = useState("")
+  const [subCategory, setSubCategory] = useState("")
+  const [brand, setBrand] = useState("")
+  const [variants, setVariants] = useState([{ size: "", color: "", price: 0, discountPercent: 0, stock: 0, sku: "" }])
+  const [newImages, setNewImages] = useState([]) // Files to be uploaded
+  const [existingImages, setExistingImages] = useState([]) // { url, public_id } for images already on Cloudinary
+  const [keywords, setKeywords] = useState("")
+  const [isFeatured, setIsFeatured] = useState(false)
+  const [isNewArrival, setIsNewArrival] = useState(false)
+  const [isBestSeller, setIsBestSeller] = useState(false)
+  const [isOutOfStock, setIsOutOfStock] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+
+  const isUploadEnabled = () => {
+    return title && description && productType && variants.length > 0 && newImages.length > 0
+  }
 
   useEffect(() => {
-    fetchProducts()
+    if (id) {
+      // Fetch product data for editing
+      const fetchProduct = async () => {
+        setLoading(true)
+        try {
+          const res = await axios.get(`${API_BASE}/api/products/${id}`)
+          const product = res.data
+          setTitle(product.title)
+          setDescription(product.description)
+          setProductType(product.productType)
+          setCategory(product.category || "")
+          setSubCategory(product.subCategory || "")
+          setBrand(product.brand || "")
+          setVariants(
+            product.variants.length > 0
+              ? product.variants
+              : [{ size: "", color: "", price: 0, discountPercent: 0, stock: 0, sku: "" }],
+          )
+          setKeywords(product.keywords.join(", "))
+          setIsFeatured(product.isFeatured)
+          setIsNewArrival(product.isNewArrival)
+          setIsBestSeller(product.isBestSeller)
+          setIsOutOfStock(product.isOutOfStock)
+
+          // Set existing images, filtering for those with public_id
+          const currentImages = []
+          if (product.images.thumbnail && product.images.thumbnail.url && product.images.thumbnail.public_id) {
+            currentImages.push(product.images.thumbnail)
+          }
+          if (product.images.others && product.images.others.length > 0) {
+            product.images.others.forEach((img) => {
+              if (img.url && img.public_id) {
+                // Only add if it has a public_id
+                currentImages.push(img)
+              }
+            })
+          }
+          setExistingImages(currentImages)
+
+          setLoading(false)
+        } catch (err) {
+          setError("Failed to fetch product data.")
+          setLoading(false)
+        }
+      }
+      fetchProduct()
+    }
+  }, [id])
+
+  const handleVariantChange = useCallback(
+    (index, field, value) => {
+      const newVariants = [...variants]
+      newVariants[index][field] = value
+      setVariants(newVariants)
+    },
+    [variants],
+  )
+
+  const addVariant = useCallback(() => {
+    setVariants([...variants, { size: "", color: "", price: 0, discountPercent: 0, stock: 0, sku: "" }])
+  }, [variants])
+
+  const removeVariant = useCallback(
+    (index) => {
+      const newVariants = variants.filter((_, i) => i !== index)
+      setVariants(newVariants)
+    },
+    [variants],
+  )
+
+  const handleImageChange = useCallback((e) => {
+    setNewImages([...e.target.files])
   }, [])
 
-  const fetchProducts = async () => {
-    try {
-      const res = await axios.get(`${API_BASE}/api/products/all-products`)
-      setProducts(res.data)
-      const uniqueTypes = [...new Set(res.data.map((p) => p.productType).filter(Boolean))].sort()
-      setAvailableProductTypes(uniqueTypes)
-    } catch (err) {
-      console.error("Fetch products error:", err)
-    }
-  }
+  const removeExistingImage = useCallback((publicIdToRemove) => {
+    setExistingImages((prevImages) => prevImages.filter((img) => img.public_id !== publicIdToRemove))
+  }, [])
 
-  const resetForm = () => {
-    setName("")
-    setVariants([{ sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" }])
-    setImages([])
-    setExistingImages([])
-    setRemovedImages([])
-    setEditingProduct(null)
-    setDetailsList([{ key: "", value: "" }])
-    setDescription("")
-    setKeywords("")
-    setKeywordsList([])
-    setProductType("")
-    const fileInput = document.getElementById("product-images")
-    if (fileInput) fileInput.value = ""
-  }
-
-  const handleImageChange = (e) => {
-    if (e.target.files) {
-      setImages([...images, ...Array.from(e.target.files)])
-    }
-  }
-
-  const handleImageRemove = (publicId) => {
-    // Only add to removedImages if publicId is a valid string
-    if (typeof publicId === "string" && publicId.length > 0) {
-      setRemovedImages((prev) => [...prev, publicId])
-    } else {
-      console.warn("Attempted to remove an image without a valid public_id:", publicId)
-    }
-    // Always remove from existingImages state to update UI
-    setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
-  }
-
-  const removeNewImage = (index) => {
-    const copy = [...images]
-    copy.splice(index, 1)
-    setImages(copy)
-  }
-
-  const handleVariantChange = (index, field, value) => {
-    setVariants((prev) => {
-      const updated = [...prev]
-      updated[index][field] = value
-      const price = Number.parseFloat(updated[index].price)
-      const discount = Number.parseFloat(updated[index].discountPercent)
-      if (!isNaN(price) && !isNaN(discount)) {
-        updated[index].finalPrice = (price - (price * discount) / 100).toFixed(2)
-      } else {
-        updated[index].finalPrice = ""
-      }
-      return updated
-    })
-  }
-
-  const addVariant = () => {
-    setVariants([
-      ...variants,
-      {
-        sizeValue: "",
-        sizeUnit: "ml",
-        price: "",
-        discountPercent: "",
-        finalPrice: "",
-        stock: "",
-      },
-    ])
-  }
-
-  const removeVariant = (i) => {
-    const copy = [...variants]
-    copy.splice(i, 1)
-    setVariants(copy)
-  }
-
-  const handleDetailChange = (index, field, value) => {
-    const copy = [...detailsList]
-    copy[index][field] = value
-    setDetailsList(copy)
-  }
-
-  const addDetailField = () => {
-    setDetailsList([...detailsList, { key: "", value: "" }])
-  }
-
-  const removeDetailField = (index) => {
-    const copy = [...detailsList]
-    copy.splice(index, 1)
-    setDetailsList(copy)
-  }
-
-  const handleKeywordsChange = (e) => {
-    setKeywords(e.target.value)
-  }
-
-  const addKeyword = () => {
-    if (keywords.trim()) {
-      const newKeywords = keywords
-        .split(",")
-        .map((k) => k.trim().toLowerCase())
-        .filter((k) => k && !keywordsList.includes(k))
-      setKeywordsList([...keywordsList, ...newKeywords])
-      setKeywords("")
-    }
-  }
-
-  const removeKeyword = (index) => {
-    const copy = [...keywordsList]
-    copy.splice(index, 1)
-    setKeywordsList(copy)
-  }
-
-  const handleAddProductType = () => {
-    const newType = newProductTypeInput.trim()
-    if (newType && !availableProductTypes.includes(newType)) {
-      setAvailableProductTypes((prev) => [...prev, newType].sort())
-      setProductType(newType)
-      setNewProductTypeInput("")
-      alert(`Product type "${newType}" added to dropdown. Save a product to persist it.`)
-    } else if (newType && availableProductTypes.includes(newType)) {
-      alert(`Product type "${newType}" already exists.`)
-    }
-  }
-
-  const handleSubmit = async () => {
-    console.log("🔘 Submit button clicked")
-    if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
-      alert("Product name and current price are required")
-      console.warn("❌ Validation failed", { name, variants })
-      return
-    }
-    if (!productType) {
-      alert("Please select a product type.")
-      return
-    }
-    if (images.length === 0 && existingImages.length === 0) {
-      alert("Please upload at least one image for the product.")
-      return
-    }
-
-    const preparedVariants = variants.map((v) => ({
-      size: `${v.sizeValue}${v.sizeUnit}`,
-      price: Number.parseFloat(v.price),
-      discountPercent: Number.parseFloat(v.discountPercent),
-      stock: Number.parseInt(v.stock),
-    }))
-
-    const detailsObject = {}
-    detailsList.forEach((item) => {
-      if (item.key && item.value) {
-        detailsObject[item.key] = item.value
-      }
-    })
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
 
     const formData = new FormData()
-    formData.append("name", name)
-    formData.append("variants", JSON.stringify(preparedVariants))
+    formData.append("title", title)
     formData.append("description", description)
-    formData.append("details", JSON.stringify(detailsObject))
-    formData.append("keywords", JSON.stringify(keywordsList))
     formData.append("productType", productType)
+    formData.append("category", category)
+    formData.append("subCategory", subCategory)
+    formData.append("brand", brand)
+    formData.append("variants", JSON.stringify(variants))
+    formData.append(
+      "keywords",
+      JSON.stringify(
+        keywords
+          .split(",")
+          .map((k) => k.trim())
+          .filter(Boolean),
+      ),
+    )
+    formData.append("isFeatured", isFeatured)
+    formData.append("isNewArrival", isNewArrival)
+    formData.append("isBestSeller", isBestSeller)
+    formData.append("isOutOfStock", isOutOfStock)
 
-    images.forEach((img) => formData.append("images", img))
+    // Append new images
+    newImages.forEach((file) => {
+      formData.append("images", file)
+    })
 
-    if (removedImages.length > 0) {
-      formData.append("removedImages", JSON.stringify(removedImages))
-    }
-
-    const token = localStorage.getItem("authToken")
-    console.log("--- Submitting Product Data ---")
-    console.log("Name:", name)
-    console.log("Product Type:", productType)
-    console.log("Variants:", preparedVariants)
-    console.log("Description:", description)
-    console.log("Details:", detailsObject)
-    console.log("Keywords:", keywordsList)
-    console.log("New Images Count:", images.length)
-    console.log("Existing Images to Remove Count:", removedImages.length)
-    if (editingProduct) {
-      console.log("Editing Product ID:", editingProduct._id)
-    }
-    console.log("Token:", token ? "Present" : "Missing")
-    console.log("-----------------------------")
-
-    if (!token) {
-      alert("Authentication token is missing. Please log in.")
-      return
-    }
+    // Append public_ids of existing images that are kept
+    const existingImagePublicIds = existingImages.map((img) => img.public_id)
+    formData.append("existingImagePublicIds", JSON.stringify(existingImagePublicIds))
 
     try {
-      let res
-      if (editingProduct) {
-        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
+      if (id) {
+        await axios.put(`${API_BASE}/api/products/edit/${id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
         })
-        alert("✅ Product updated")
-        console.log("🟢 Updated:", res.data)
+        setSuccess("Product updated successfully!")
       } else {
-        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
+        await axios.post(`${API_BASE}/api/products/add`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
         })
-        alert("✅ Product uploaded")
-        console.log("🟢 Uploaded:", res.data)
+        setSuccess("Product added successfully!")
+        // Clear form after successful add
+        setTitle("")
+        setDescription("")
+        setProductType("")
+        setCategory("")
+        setSubCategory("")
+        setBrand("")
+        setVariants([{ size: "", color: "", price: 0, discountPercent: 0, stock: 0, sku: "" }])
+        setNewImages([])
+        setExistingImages([])
+        setKeywords("")
+        setIsFeatured(false)
+        setIsNewArrival(false)
+        setIsBestSeller(false)
+        setIsOutOfStock(false)
       }
-      resetForm()
-      fetchProducts()
+      navigate("/admin/products") // Redirect to product list or similar
     } catch (err) {
-      console.error("❌ Operation error:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Operation failed")
-    }
-  }
-
-  const handleEdit = (product) => {
-    setEditingProduct(product)
-    setName(product.title)
-    setProductType(product.productType || "")
-    const parsedVariants = product.variants
-      .map((v) => {
-        const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
-        if (!match) return null
-        const [, sizeValue, sizeUnit] = match
-        return {
-          sizeValue,
-          sizeUnit,
-          price: v.price,
-          discountPercent: v.discountPercent || "",
-          finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
-          stock: v.stock,
-        }
-      })
-      .filter(Boolean)
-    setVariants(parsedVariants)
-    setImages([]) // Clear new images input
-    // Filter existing images: only include those that have a public_id
-    // This assumes images without public_id are old local files not managed by Cloudinary
-    setExistingImages(product.images?.others?.filter((img) => img.public_id) || [])
-    setRemovedImages([]) // Clear removed images state
-    setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
-    setDescription(product.description || "")
-    setKeywordsList(product.keywords || [])
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return
-    try {
-      const token = localStorage.getItem("authToken")
-      await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      alert("Product deleted successfully")
-      fetchProducts()
-    } catch (err) {
-      console.error("Delete failed:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Delete failed")
-    }
-  }
-
-  const toggleStock = async (id, currentStatus) => {
-    try {
-      const token = localStorage.getItem("authToken")
-      await axios.put(
-        `${API_BASE}/api/products/toggle-stock/${id}`,
-        {
-          isOutOfStock: !currentStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
-      fetchProducts()
-    } catch (err) {
-      console.error("Stock update failed:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Stock update failed")
+      console.error("Error submitting product:", err.response?.data?.message || err.message)
+      setError(err.response?.data?.message || "Failed to save product.")
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
-      <input
-        type="text"
-        placeholder="Product Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="p-2 border w-full mb-4"
-      />
-      {variants.map((variant, i) => (
-        <div key={i} className="grid grid-cols-7 gap-2 mb-2">
-          <input
-            type="number"
-            placeholder="Size Value"
-            value={variant.sizeValue}
-            onChange={(e) => handleVariantChange(i, "sizeValue", e.target.value)}
-            className="p-2 border"
-          />
-          <select
-            value={variant.sizeUnit}
-            onChange={(e) => handleVariantChange(i, "sizeUnit", e.target.value)}
-            className="p-2 border"
-          >
-            <option value="ml">ml</option>
-            <option value="li">li</option>
-            <option value="g">g</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Price"
-            value={variant.price}
-            onChange={(e) => handleVariantChange(i, "price", e.target.value)}
-            className="p-2 border"
-          />
-          <input
-            type="number"
-            placeholder="Discount %"
-            value={variant.discountPercent}
-            onChange={(e) => handleVariantChange(i, "discountPercent", e.target.value)}
-            className="p-2 border"
-          />
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">{id ? "Edit Product" : "Add New Product"}</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <div className="text-red-500">{error}</div>}
+        {success && <div className="text-green-500">{success}</div>}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Title</label>
           <input
             type="text"
-            value={variant.finalPrice}
-            placeholder="Final Price"
-            readOnly
-            className="p-2 border bg-gray-100"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
           />
-          <input
-            type="number"
-            placeholder="Stock"
-            value={variant.stock}
-            onChange={(e) => handleVariantChange(i, "stock", e.target.value)}
-            className="p-2 border"
-          />
-          {variants.length > 1 && (
-            <button onClick={() => removeVariant(i)} className="text-red-500">
-              Remove
-            </button>
-          )}
         </div>
-      ))}
-      <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
-        + Add Variant
-      </button>
-      <div className="flex flex-wrap gap-8 mt-6">
-        {/* Product Type Section */}
-        <div className="flex flex-col">
-          <label className="block mb-2 font-semibold">Product Type</label>
-          <select
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            rows="4"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+          ></textarea>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Product Type</label>
+          <input
+            type="text"
             value={productType}
             onChange={(e) => setProductType(e.target.value)}
-            className="p-2 border w-[180px] rounded"
-          >
-            <option value="">Select Type</option>
-            {availableProductTypes.map((typeOption, index) => (
-              <option key={index} value={typeOption}>
-                {typeOption}
-              </option>
-            ))}
-          </select>
-          <div className="mt-4 flex gap-2">
-            <input
-              type="text"
-              placeholder="Add new type"
-              value={newProductTypeInput}
-              onChange={(e) => setNewProductTypeInput(e.target.value)}
-              className="p-2 border rounded flex-1"
-              onKeyPress={(e) => e.key === "Enter" && handleAddProductType()}
-            />
-            <button onClick={handleAddProductType} className="bg-purple-600 text-white px-4 py-2 rounded">
-              Add Type
-            </button>
-          </div>
+            required
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+          />
         </div>
-        {/* Keywords Section */}
-        <div className="flex-1">
-          <label className="block mb-2 font-semibold">Search Keywords</label>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              placeholder="Add keywords (e.g., masala, spice, turmeric)"
-              value={keywords}
-              onChange={handleKeywordsChange}
-              className="p-2 border flex-1 rounded"
-              onKeyPress={(e) => e.key === "Enter" && addKeyword()}
-            />
-            <button onClick={addKeyword} className="bg-green-500 text-white px-4 py-2 rounded">
-              Add
-            </button>
-          </div>
-          {keywordsList.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {keywordsList.map((keyword, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                >
-                  {keyword}
-                  <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <p className="text-sm text-gray-600 mt-2">
-            💡 <strong>Examples:</strong> turmeric, haldi, masala, spice, powder, yellow, cooking
-          </p>
-        </div>
-      </div>
-      <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
-      {detailsList.map((item, index) => (
-        <div key={index} className="grid grid-cols-3 gap-2 mb-2">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Category</label>
           <input
             type="text"
-            placeholder="Label (e.g., Brand)"
-            value={item.key}
-            onChange={(e) => handleDetailChange(index, "key", e.target.value)}
-            className="p-2 border"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Sub Category</label>
           <input
             type="text"
-            placeholder="Value (e.g., Mirakle)"
-            value={item.value}
-            onChange={(e) => handleDetailChange(index, "value", e.target.value)}
-            className="p-2 border"
+            value={subCategory}
+            onChange={(e) => setSubCategory(e.target.value)}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
           />
-          {detailsList.length > 1 && (
-            <button onClick={() => removeDetailField(index)} className="text-red-500">
-              Remove
-            </button>
-          )}
         </div>
-      ))}
-      <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">
-        + Add Detail
-      </button>
-      <textarea
-        rows={5}
-        placeholder="Enter product description (optional)"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        className="w-full border p-2"
-      />
-      <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
-      {images.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          {images.map((img, i) => (
-            <div key={i} className="relative">
-              <img
-                src={URL.createObjectURL(img) || "/placeholder.svg"}
-                alt={`New image ${i}`}
-                className="w-full h-24 object-cover rounded"
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Brand</label>
+          <input
+            type="text"
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+          />
+        </div>
+
+        <h3 className="text-lg font-semibold mt-6 mb-2">Variants</h3>
+        {variants.map((variant, index) => (
+          <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 border p-4 rounded-md relative">
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700">Size</label>
+              <input
+                type="text"
+                value={variant.size}
+                onChange={(e) => handleVariantChange(index, "size", e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
               />
-              <button
-                onClick={() => removeNewImage(i)}
-                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
-              >
-                X
-              </button>
             </div>
-          ))}
-        </div>
-      )}
-      {existingImages.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          {existingImages.map((img, i) => (
-            <div key={i} className="relative">
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700">Color</label>
+              <input
+                type="text"
+                value={variant.color}
+                onChange={(e) => handleVariantChange(index, "color", e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              />
+            </div>
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700">Price</label>
+              <input
+                type="number"
+                value={variant.price}
+                onChange={(e) => handleVariantChange(index, "price", Number.parseFloat(e.target.value))}
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              />
+            </div>
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700">Discount (%)</label>
+              <input
+                type="number"
+                value={variant.discountPercent}
+                onChange={(e) => handleVariantChange(index, "discountPercent", Number.parseFloat(e.target.value))}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              />
+            </div>
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700">Stock</label>
+              <input
+                type="number"
+                value={variant.stock}
+                onChange={(e) => handleVariantChange(index, "stock", Number.parseInt(e.target.value))}
+                required
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              />
+            </div>
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700">SKU</label>
+              <input
+                type="text"
+                value={variant.sku}
+                onChange={(e) => handleVariantChange(index, "sku", e.target.value)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+              />
+            </div>
+            {variants.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeVariant(index)}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+              >
+                &times;
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={addVariant}
+          className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+        >
+          Add Variant
+        </button>
+
+        <h3 className="text-lg font-semibold mt-6 mb-2">Images</h3>
+        <div className="flex flex-wrap gap-4 mb-4">
+          {existingImages.map((img, index) => (
+            <div key={img.public_id || index} className="relative w-32 h-32 border rounded-md overflow-hidden">
               <img
                 src={img.url || "/placeholder.svg"}
-                alt={`Existing image ${i}`}
-                className="w-full h-24 object-cover rounded"
+                alt={`Product image ${index}`}
+                className="w-full h-full object-cover"
               />
-              {/* Only show remove button if public_id exists */}
-              {img.public_id && (
+              {img.public_id && ( // Only show remove button if it has a public_id
                 <button
-                  onClick={() => handleImageRemove(img.public_id)}
-                  className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
+                  type="button"
+                  onClick={() => removeExistingImage(img.public_id)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
+                  aria-label="Remove image"
                 >
-                  X
+                  &times;
                 </button>
               )}
             </div>
           ))}
         </div>
-      )}
-      <button
-        onClick={handleSubmit}
-        className={`mt-6 ${editingProduct ? "bg-orange-500" : "bg-green-600"} text-white px-4 py-2 rounded`}
-      >
-        {editingProduct ? "Update Product" : "Upload Product"}
-      </button>
-      {editingProduct && (
-        <button onClick={resetForm} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
-          Cancel
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Upload New Images</label>
+          <input
+            type="file"
+            multiple
+            onChange={handleImageChange}
+            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Keywords (comma-separated)</label>
+          <input
+            type="text"
+            value={keywords}
+            onChange={(e) => setKeywords(e.target.value)}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={isFeatured}
+              onChange={(e) => setIsFeatured(e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-900">Featured</span>
+          </label>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={isNewArrival}
+              onChange={(e) => setIsNewArrival(e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-900">New Arrival</span>
+          </label>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={isBestSeller}
+              onChange={(e) => setIsBestSeller(e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-900">Best Seller</span>
+          </label>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={isOutOfStock}
+              onChange={(e) => setIsOutOfStock(e.target.checked)}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-900">Out of Stock</span>
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !isUploadEnabled()}
+          className="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 disabled:opacity-50"
+        >
+          {loading ? "Saving..." : id ? "Update Product" : "Add Product"}
         </button>
-      )}
-      <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
-      <input
-        type="text"
-        placeholder="Search..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="p-2 border w-full mb-4"
-      />
-      <div className="grid md:grid-cols-3 gap-4">
-        {products
-          .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map((product) => (
-            <div key={product._id} className="border p-4 rounded shadow">
-              <img
-                src={
-                  product?.images?.others?.[0]?.url
-                    ? product.images.others[0].url
-                    : "/placeholder.svg?height=150&width=150"
-                }
-                alt={product.title}
-                className="w-full h-40 object-cover mb-2 rounded"
-              />
-              <h3 className="text-lg font-bold">{product.title}</h3>
-              {product.productType && (
-                <p className="text-sm text-gray-700 mb-1">
-                  <span className="font-semibold">Type:</span> {product.productType}
-                </p>
-              )}
-              {product.keywords && product.keywords.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs text-gray-600 mb-1">Keywords:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {product.keywords.slice(0, 5).map((keyword, i) => (
-                      <span key={i} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                        {keyword}
-                      </span>
-                    ))}
-                    {product.keywords.length > 5 && (
-                      <span className="text-xs text-gray-500">+{product.keywords.length - 5} more</span>
-                    )}
-                  </div>
-                </div>
-              )}
-              {product.variants?.map((v, i) => (
-                <p key={i} className="text-sm">
-                  {v.size} - ₹{v.price} ({v.discountPercent || 0}% off)
-                </p>
-              ))}
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => handleEdit(product)} className="bg-yellow-500 text-white px-3 py-1 rounded">
-                  Edit
-                </button>
-                <button onClick={() => handleDelete(product._id)} className="bg-red-500 text-white px-3 py-1 rounded">
-                  Delete
-                </button>
-                <button
-                  onClick={() => toggleStock(product._id, product.isOutOfStock)}
-                  className="bg-blue-500 text-white px-3 py-1 rounded"
-                >
-                  {product.isOutOfStock ? "Set In Stock" : "Set Out of Stock"}
-                </button>
-              </div>
-            </div>
-          ))}
-      </div>
+      </form>
     </div>
   )
 }

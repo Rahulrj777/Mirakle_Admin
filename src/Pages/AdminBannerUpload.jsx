@@ -2,9 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
+import { useParams, useNavigate } from "react-router-dom"
 import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
+  const { id } = useParams() // For editing existing banner
+  const navigate = useNavigate()
+
   const [image, setImage] = useState(null)
   const [type, setType] = useState("all") // Default to "all" to show all banners
   const [banners, setBanners] = useState([]) // For homebanner, category, product-type
@@ -18,35 +22,69 @@ const AdminBannerUpload = () => {
   const [percentage, setPercentage] = useState("") // For offerbanner percentage
   const [offerSlot, setOfferSlot] = useState("") // For offerbanner slot
   const [availableProductTypes, setAvailableProductTypes] = useState([])
-
-  // ✅ NEW: State for offer banner linking
-  const [offerLinkType, setOfferLinkType] = useState("none") // 'none', 'product', 'category'
-  const [linkedProductForOffer, setLinkedProductForOffer] = useState(null) // Stores selected product object
-  const [linkedCategoryForOffer, setLinkedCategoryForOffer] = useState("") // Stores selected category string
-  const [linkedDiscountUpToForOffer, setLinkedDiscountUpToForOffer] = useState("") // Stores discount % for offer banner link
-
+  const [description, setDescription] = useState("") // For new banner description
+  const [linkType, setLinkType] = useState("product") // 'product', 'category', 'offer', 'url'
+  const [linkValue, setLinkValue] = useState("")
+  const [imageFile, setImageFile] = useState(null)
+  const [existingImageUrl, setExistingImageUrl] = useState("")
+  const [existingImagePublicId, setExistingImagePublicId] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [editingBanner, setEditingBanner] = useState(null) // Holds the banner object being edited
+  const [offerLinkType, setOfferLinkType] = useState("product") // 'product', 'category', 'none'
+  const [linkedProductForOffer, setLinkedProductForOffer] = useState(null)
+  const [linkedCategoryForOffer, setLinkedCategoryForOffer] = useState("")
+  const [linkedDiscountUpToForOffer, setLinkedDiscountUpToForOffer] = useState("")
 
   // Fetch all banners and products on component mount
   useEffect(() => {
     fetchAllBannersAndProducts()
-  }, [])
+    if (id) {
+      // Fetch banner data for editing
+      const fetchBanner = async () => {
+        setLoading(true)
+        try {
+          const res = await axios.get(`${API_BASE}/api/banners/${id}`)
+          const banner = res.data
+          setTitle(banner.title)
+          setDescription(banner.description)
+          setLinkType(banner.linkType)
+          setLinkValue(banner.linkValue)
+          setExistingImageUrl(banner.imageUrl)
+          setExistingImagePublicId(banner.imagePublicId)
+          setType(banner.type)
+          setEditingBanner(banner)
+          setLoading(false)
+        } catch (err) {
+          setError("Failed to fetch banner data.")
+          setLoading(false)
+        }
+      }
+      fetchBanner()
+    }
+  }, [id])
 
   // Reset image and related states when banner type changes or when editing is cancelled
   const resetFormStates = useCallback(() => {
     setImage(null)
     setTitle("")
-    setPercentage("")
-    setOfferSlot("")
+    setDescription("")
+    setLinkType("product")
+    setLinkValue("")
     setSelectedProductIds([])
     setSelectedVariantIndex(0)
     setProductSearchTerm("")
     setSelectedCategoryType("")
-    setOfferLinkType("none")
-    setLinkedProductForOffer(null)
-    setLinkedCategoryForOffer("")
-    setLinkedDiscountUpToForOffer("")
+    setPercentage("")
+    setOfferSlot("")
+    setExistingImageUrl("")
+    setExistingImagePublicId("")
     setEditingBanner(null) // Clear editing state
+    setOfferLinkType("product") // Reset offer link type
+    setLinkedProductForOffer(null) // Reset linked product
+    setLinkedCategoryForOffer("") // Reset linked category
+    setLinkedDiscountUpToForOffer("") // Reset linked discount up to
     const fileInput = document.getElementById(`banner-file-${type}`)
     if (fileInput) fileInput.value = "" // Clear file input
   }, [type])
@@ -108,6 +146,10 @@ const AdminBannerUpload = () => {
 
     const formData = new FormData()
     formData.append("type", type)
+    formData.append("title", title.trim())
+    formData.append("description", description.trim())
+    formData.append("linkType", linkType)
+    formData.append("linkValue", linkValue)
 
     try {
       let endpoint = `${API_BASE}/api/banners/upload`
@@ -157,10 +199,10 @@ const AdminBannerUpload = () => {
           formData.append("linkedProductId", linkedProductForOffer._id)
         } else if (offerLinkType === "category" && linkedCategoryForOffer) {
           formData.append("linkedCategory", linkedCategoryForOffer)
-        }
-        if (linkedDiscountUpToForOffer !== "") {
-          // Only append if it has a value
+        } else if (offerLinkType === "offer" && linkedDiscountUpToForOffer) {
           formData.append("linkedDiscountUpTo", linkedDiscountUpToForOffer)
+        } else if (offerLinkType === "url" && linkValue) {
+          formData.append("linkedUrl", linkValue)
         }
       } else if (type === "product-type") {
         if (selectedProductIds.length === 0) {
@@ -321,6 +363,9 @@ const AdminBannerUpload = () => {
 
     // Populate common fields
     setTitle(banner.title || "")
+    setDescription(banner.description || "")
+    setLinkType(banner.linkType || "product")
+    setLinkValue(banner.linkValue || "")
     setImage(null) // Clear image input, user can re-upload if needed
 
     // Populate type-specific fields
@@ -373,27 +418,13 @@ const AdminBannerUpload = () => {
         isLinkDataValid = !!linkedProductForOffer
       } else if (offerLinkType === "category") {
         isLinkDataValid = !!linkedCategoryForOffer
+      } else if (offerLinkType === "offer") {
+        isLinkDataValid = !!linkedDiscountUpToForOffer
+      } else if (offerLinkType === "url") {
+        isLinkDataValid = !!linkValue
       }
 
-      let isDiscountUpToValid = true // Assume valid unless proven otherwise
-      if (linkedDiscountUpToForOffer !== "") {
-        const discountVal = Number(linkedDiscountUpToForOffer)
-        isDiscountUpToValid = !isNaN(discountVal) && discountVal >= 0 && discountVal <= 100
-        // If a discount value is provided AND it's greater than 0, a link type must be selected
-        if (isDiscountUpToValid && discountVal > 0 && offerLinkType === "none") {
-          isDiscountUpToValid = false
-        }
-      }
-
-      return (
-        hasImage &&
-        hasTitle &&
-        hasPercentage &&
-        isPercentageValid &&
-        hasOfferSlot &&
-        isLinkDataValid &&
-        isDiscountUpToValid
-      )
+      return hasImage && hasTitle && hasPercentage && isPercentageValid && hasOfferSlot && isLinkDataValid
     }
 
     if (type === "product-type") {
@@ -499,7 +530,7 @@ const AdminBannerUpload = () => {
                 </div>
               )}
               {selectedProductIds.length === 1 && selectedProduct && selectedVariant && (
-                <div className="bg-gray-50 p-3 rounded border">
+                <div className="bg-gray-50 p-3 rounded border flex items-center gap-3">
                   <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
                   <div className="flex gap-3">
                     {selectedProduct.images?.others?.[0] && (
@@ -629,27 +660,9 @@ const AdminBannerUpload = () => {
                   <label className="flex items-center">
                     <input
                       type="radio"
-                      value="none"
-                      checked={offerLinkType === "none"}
-                      onChange={() => {
-                        setOfferLinkType("none")
-                        setLinkedProductForOffer(null)
-                        setLinkedCategoryForOffer("")
-                        setLinkedDiscountUpToForOffer("") // Clear discount if no link
-                      }}
-                      className="mr-2 accent-green-600"
-                    />
-                    No Specific Link
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
                       value="product"
                       checked={offerLinkType === "product"}
-                      onChange={() => {
-                        setOfferLinkType("product")
-                        setLinkedCategoryForOffer("")
-                      }}
+                      onChange={() => setOfferLinkType("product")}
                       className="mr-2 accent-green-600"
                     />
                     Specific Product
@@ -659,89 +672,75 @@ const AdminBannerUpload = () => {
                       type="radio"
                       value="category"
                       checked={offerLinkType === "category"}
-                      onChange={() => {
-                        setOfferLinkType("category")
-                        setLinkedProductForOffer(null)
-                      }}
+                      onChange={() => setOfferLinkType("category")}
                       className="mr-2 accent-green-600"
                     />
                     Product Category
                   </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="offer"
+                      checked={offerLinkType === "offer"}
+                      onChange={() => setOfferLinkType("offer")}
+                      className="mr-2 accent-green-600"
+                    />
+                    Offer (Discount % up to)
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="url"
+                      checked={offerLinkType === "url"}
+                      onChange={() => setOfferLinkType("url")}
+                      className="mr-2 accent-green-600"
+                    />
+                    External URL
+                  </label>
                 </div>
 
-                {offerLinkType === "product" && (
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      placeholder="Search product to link..."
-                      value={productSearchTerm}
-                      onChange={(e) => setProductSearchTerm(e.target.value)}
-                      className="mb-2 p-2 border w-full rounded"
-                    />
-                    <div className="max-h-40 overflow-y-auto border rounded p-2">
-                      {filteredProducts.map((product) => (
-                        <label key={product._id} className="flex items-center gap-2 mb-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="linkedProduct"
-                            value={product._id}
-                            checked={linkedProductForOffer?._id === product._id}
-                            onChange={() => setLinkedProductForOffer(product)}
-                            className="mr-2 accent-green-600"
-                          />
-                          <span className="text-sm">{product.title}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {linkedProductForOffer && (
-                      <div className="bg-gray-100 p-2 rounded mt-2 text-sm">
-                        Linked Product: <span className="font-semibold">{linkedProductForOffer.title}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {offerLinkType === "category" && (
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Select Category:</label>
-                    <select
-                      value={linkedCategoryForOffer}
-                      onChange={(e) => setLinkedCategoryForOffer(e.target.value)}
-                      className="p-2 border w-full rounded"
-                    >
-                      <option value="">Select a category</option>
-                      {availableProductTypes.map((typeOption, index) => (
-                        <option key={index} value={typeOption}>
-                          {typeOption}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {(offerLinkType === "product" || offerLinkType === "category") && (
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Discount Up To (%):</label>
-                    <input
-                      type="number"
-                      placeholder="e.g., 25 (optional)"
-                      value={linkedDiscountUpToForOffer}
-                      onChange={(e) => setLinkedDiscountUpToForOffer(e.target.value)}
-                      className="p-2 border w-full rounded"
-                      min="0"
-                      max="100"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      If set, clicking the banner will filter products with up to this discount.
-                    </p>
-                  </div>
-                )}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">Link Value</label>
+                  <input
+                    type="text"
+                    value={linkValue}
+                    onChange={(e) => setLinkValue(e.target.value)}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  />
+                  <p className="mt-1 text-sm text-gray-500">
+                    {offerLinkType === "product" && "Enter Product ID"}
+                    {offerLinkType === "category" && "Enter Category Name (e.g., Electronics)"}
+                    {offerLinkType === "offer" && "Enter Max Discount Percentage (e.g., 50 for 50% off)"}
+                    {offerLinkType === "url" && "Enter Full URL (e.g., https://example.com)"}
+                  </p>
+                </div>
               </div>
             </>
           )}
 
           {(type === "homebanner" || type === "category" || type === "offerbanner") && (
             <div className="flex items-center gap-2 mb-4">
+              {existingImageUrl && (
+                <div className="mb-2">
+                  <p className="text-sm text-gray-600">Current Image:</p>
+                  <img
+                    src={existingImageUrl || "/placeholder.svg"}
+                    alt="Current Banner"
+                    className="w-48 h-auto rounded-md border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExistingImageUrl("")
+                      setExistingImagePublicId("")
+                      setImageFile(null)
+                    }}
+                    className="text-red-500 text-sm mt-1"
+                  >
+                    Remove Current Image
+                  </button>
+                </div>
+              )}
               <input
                 id={`banner-file-${type}`}
                 type="file"
@@ -770,7 +769,7 @@ const AdminBannerUpload = () => {
             className={`px-4 py-2 rounded text-white ${isUploadEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
             disabled={!isUploadEnabled}
           >
-            {editingBanner ? "Update Banner" : "Upload Banner"}
+            {loading ? "Saving..." : editingBanner ? "Update Banner" : "Upload Banner"}
           </button>
           {editingBanner && (
             <button onClick={resetFormStates} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
@@ -842,6 +841,9 @@ const AdminBannerUpload = () => {
             )}
             {banner.linkedDiscountUpTo > 0 && (
               <div className="text-red-500 text-center text-xs mt-1">Up to {banner.linkedDiscountUpTo}% Discount</div>
+            )}
+            {banner.linkedUrl && (
+              <div className="text-gray-600 text-center text-xs mt-1">Linked URL: {banner.linkedUrl}</div>
             )}
             <div className="mt-3 text-center flex justify-center gap-2">
               <button
