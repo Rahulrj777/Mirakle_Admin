@@ -514,9 +514,9 @@ const AdminBannerUpload = () => {
                     if (!product || !variant) return null
                     return (
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
-                        {product.images?.others?.[0] && (
+                        {product.images?.others?.[0]?.url && (
                           <img
-                            src={product.images.others[0]}
+                            src={product.images.others[0].url}
                             alt={product.title}
                             className="w-16 h-16 object-cover rounded"
                           />
