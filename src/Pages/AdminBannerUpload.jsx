@@ -1,38 +1,31 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
-  const [type, setType] = useState("all") // Default to "all" to show all banners
-  const [banners, setBanners] = useState([]) // For homebanner, category, product-type
-  const [offerBanners, setOfferBanners] = useState([]) // For offerbanner
+  const [type, setType] = useState("all") 
+  const [banners, setBanners] = useState([]) 
+  const [offerBanners, setOfferBanners] = useState([])
   const [products, setProducts] = useState([])
-  const [selectedProductIds, setSelectedProductIds] = useState([]) // For product-type banners
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0) // For product-type banners
-  const [productSearchTerm, setProductSearchTerm] = useState("") // For product search
-  const [selectedCategoryType, setSelectedCategoryType] = useState("") // For category banners
-  const [title, setTitle] = useState("") // For offerbanner title
-  const [percentage, setPercentage] = useState("") // For offerbanner percentage
-  const [offerSlot, setOfferSlot] = useState("") // For offerbanner slot
+  const [selectedProductIds, setSelectedProductIds] = useState([])
+  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0)
+  const [productSearchTerm, setProductSearchTerm] = useState("") 
+  const [selectedCategoryType, setSelectedCategoryType] = useState("") 
+  const [title, setTitle] = useState("") 
+  const [percentage, setPercentage] = useState("")
+  const [offerSlot, setOfferSlot] = useState("") 
   const [availableProductTypes, setAvailableProductTypes] = useState([])
+  const [offerLinkType, setOfferLinkType] = useState("none")
+  const [linkedProductForOffer, setLinkedProductForOffer] = useState(null)
+  const [linkedCategoryForOffer, setLinkedCategoryForOffer] = useState("")
+  const [linkedDiscountUpToForOffer, setLinkedDiscountUpToForOffer] = useState("")
+  const [editingBanner, setEditingBanner] = useState(null)
 
-  // ✅ NEW: State for offer banner linking
-  const [offerLinkType, setOfferLinkType] = useState("none") // 'none', 'product', 'category'
-  const [linkedProductForOffer, setLinkedProductForOffer] = useState(null) // Stores selected product object
-  const [linkedCategoryForOffer, setLinkedCategoryForOffer] = useState("") // Stores selected category string
-  const [linkedDiscountUpToForOffer, setLinkedDiscountUpToForOffer] = useState("") // Stores discount % for offer banner link
-
-  const [editingBanner, setEditingBanner] = useState(null) // Holds the banner object being edited
-
-  // Fetch all banners and products on component mount
   useEffect(() => {
     fetchAllBannersAndProducts()
   }, [])
 
-  // Reset image and related states when banner type changes or when editing is cancelled
   const resetFormStates = useCallback(() => {
     setImage(null)
     setTitle("")
@@ -46,14 +39,14 @@ const AdminBannerUpload = () => {
     setLinkedProductForOffer(null)
     setLinkedCategoryForOffer("")
     setLinkedDiscountUpToForOffer("")
-    setEditingBanner(null) // Clear editing state
+    setEditingBanner(null)
     const fileInput = document.getElementById(`banner-file-${type}`)
-    if (fileInput) fileInput.value = "" // Clear file input
+    if (fileInput) fileInput.value = ""
   }, [type])
 
   useEffect(() => {
     resetFormStates()
-  }, [type, resetFormStates]) // Reset when type changes
+  }, [type, resetFormStates])
 
   const fetchAllBannersAndProducts = async () => {
     try {
@@ -63,7 +56,6 @@ const AdminBannerUpload = () => {
         axios.get(`${API_BASE}/api/products/all-products`),
       ])
       setBanners(bannersRes.data)
-      // ✅ FIX: Explicitly add 'type' to offer banners for consistent filtering
       setOfferBanners(offerBannersRes.data.map((b) => ({ ...b, type: "offerbanner" })))
       setProducts(productsRes.data)
       const uniqueTypes = [...new Set(productsRes.data.map((p) => p.productType).filter(Boolean))].sort()
@@ -138,12 +130,10 @@ const AdminBannerUpload = () => {
       } else if (type === "offerbanner") {
         endpoint = `${API_BASE}/api/offer-banners/${editingBanner ? editingBanner._id : "upload"}`
         if (!image && !editingBanner?.imageUrl) {
-          // Ensure image exists for new or old
           alert("Please select an image for the Offer Zone Banner.")
           return
         }
         if (!title.trim() || percentage === "" || !offerSlot) {
-          // percentage can be 0, so check for empty string
           alert("Please enter title, percentage, and select an offer slot.")
           return
         }
@@ -152,14 +142,12 @@ const AdminBannerUpload = () => {
         formData.append("percentage", percentage)
         formData.append("slot", offerSlot)
 
-        // Add linking data
         if (offerLinkType === "product" && linkedProductForOffer) {
           formData.append("linkedProductId", linkedProductForOffer._id)
         } else if (offerLinkType === "category" && linkedCategoryForOffer) {
           formData.append("linkedCategory", linkedCategoryForOffer)
         }
         if (linkedDiscountUpToForOffer !== "") {
-          // Only append if it has a value
           formData.append("linkedDiscountUpTo", linkedDiscountUpToForOffer)
         }
       } else if (type === "product-type") {
@@ -222,18 +210,16 @@ const AdminBannerUpload = () => {
         } else {
           alert("No banners uploaded. Please check product images or errors.")
         }
-        // Reset product-type specific states
         setSelectedProductIds([])
         setSelectedVariantIndex(0)
         setProductSearchTerm("")
-        fetchAllBannersAndProducts() // Re-fetch all data
+        fetchAllBannersAndProducts()
         return
       } else {
         alert("Unknown banner type selected. Please choose a valid banner type.")
         return
       }
 
-      // Perform the actual upload/update for non-product-type banners
       if (method === "post") {
         await axios.post(endpoint, formData, {
           headers: { "Content-Type": "multipart/form-data" },
@@ -246,8 +232,8 @@ const AdminBannerUpload = () => {
         alert(`✅ ${type.replace("banner", " Banner")} updated`)
       }
 
-      resetFormStates() // Clear form after successful operation
-      fetchAllBannersAndProducts() // Re-fetch all data
+      resetFormStates()
+      fetchAllBannersAndProducts() 
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
       alert(err.response?.data?.message || "Operation failed")
