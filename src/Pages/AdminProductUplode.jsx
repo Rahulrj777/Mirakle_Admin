@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
 
@@ -8,13 +8,9 @@ export default function AdminProductUpload() {
   const [variants, setVariants] = useState([
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
-  const [mainImage, setMainImage] = useState(null) // For new main image file
-  const [existingMainImage, setExistingMainImage] = useState(null) // For existing main image (Cloudinary URL/public_id)
-  const [mainImagePublicIdToRemove, setMainImagePublicIdToRemove] = useState(null) // To track if main image is removed
-  const [otherImages, setOtherImages] = useState([]) // For new other image files
-  const [existingOtherImages, setExistingOtherImages] = useState([]) // For existing other images (Cloudinary URLs/public_ids)
-  const [removedOtherImagesPublicIds, setRemovedOtherImagesPublicIds] = useState([]) // Stores public_ids of 'other' images to remove
-
+  const [images, setImages] = useState([]) // For new files to upload
+  const [existingImages, setExistingImages] = useState([]) // For images already on Cloudinary
+  const [removedImages, setRemovedImages] = useState([]) // Stores public_ids to remove
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -41,59 +37,37 @@ export default function AdminProductUpload() {
     }
   }
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setName("")
     setVariants([{ sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" }])
-    setMainImage(null)
-    setExistingMainImage(null)
-    setMainImagePublicIdToRemove(null)
-    setOtherImages([])
-    setExistingOtherImages([])
-    setRemovedOtherImagesPublicIds([])
+    setImages([])
+    setExistingImages([])
+    setRemovedImages([])
     setEditingProduct(null)
     setDetailsList([{ key: "", value: "" }])
     setDescription("")
     setKeywords("")
     setKeywordsList([])
     setProductType("")
-    // Clear file inputs
-    const mainImageInput = document.getElementById("main-image")
-    if (mainImageInput) mainImageInput.value = ""
-    const otherImagesInput = document.getElementById("other-images")
-    if (otherImagesInput) otherImagesInput.value = ""
-  }, [])
+    const fileInput = document.getElementById("product-images")
+    if (fileInput) fileInput.value = ""
+  }
 
   const handleImageChange = (e) => {
-    const { name: inputName, files } = e.target
-    if (!files || files.length === 0) return
-
-    if (inputName === "mainImage") {
-      setMainImage(files[0])
-      setMainImagePublicIdToRemove(null) // Clear removal flag if new main image is selected
-    } else if (inputName === "otherImages") {
-      setOtherImages((prev) => [...prev, ...Array.from(files)])
+    if (e.target.files) {
+      setImages([...images, ...Array.from(e.target.files)])
     }
   }
 
-  const handleExistingMainImageRemove = () => {
-    if (existingMainImage?.public_id) {
-      setMainImagePublicIdToRemove(existingMainImage.public_id)
-    }
-    setExistingMainImage(null)
-    setMainImage(null) // Clear any newly selected main image too
-    const mainImageInput = document.getElementById("main-image")
-    if (mainImageInput) mainImageInput.value = ""
+  const handleImageRemove = (publicId) => {
+    setRemovedImages((prev) => [...prev, publicId])
+    setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
   }
 
-  const handleExistingOtherImageRemove = (publicId) => {
-    setRemovedOtherImagesPublicIds((prev) => [...prev, publicId])
-    setExistingOtherImages((prev) => prev.filter((img) => img.public_id !== publicId))
-  }
-
-  const removeNewOtherImage = (index) => {
-    const copy = [...otherImages]
+  const removeNewImage = (index) => {
+    const copy = [...images]
     copy.splice(index, 1)
-    setOtherImages(copy)
+    setImages(copy)
   }
 
   const handleVariantChange = (index, field, value) => {
@@ -191,8 +165,8 @@ export default function AdminProductUpload() {
       alert("Please select a product type.")
       return
     }
-    if (!mainImage && !existingMainImage && otherImages.length === 0 && existingOtherImages.length === 0) {
-      alert("Please upload at least one image for the product (main or other).")
+    if (images.length === 0 && existingImages.length === 0) {
+      alert("Please upload at least one image for the product.")
       return
     }
 
@@ -218,14 +192,10 @@ export default function AdminProductUpload() {
     formData.append("keywords", JSON.stringify(keywordsList))
     formData.append("productType", productType)
 
-    if (mainImage) formData.append("mainImage", mainImage)
-    otherImages.forEach((img) => formData.append("otherImages", img))
+    images.forEach((img) => formData.append("images", img))
 
-    if (removedOtherImagesPublicIds.length > 0) {
-      formData.append("removedImages", JSON.stringify(removedOtherImagesPublicIds))
-    }
-    if (mainImagePublicIdToRemove) {
-      formData.append("mainImagePublicIdToRemove", mainImagePublicIdToRemove)
+    if (removedImages.length > 0) {
+      formData.append("removedImages", JSON.stringify(removedImages))
     }
 
     const token = localStorage.getItem("authToken")
@@ -236,10 +206,8 @@ export default function AdminProductUpload() {
     console.log("Description:", description)
     console.log("Details:", detailsObject)
     console.log("Keywords:", keywordsList)
-    console.log("New Main Image:", mainImage ? "Present" : "Not Present")
-    console.log("New Other Images Count:", otherImages.length)
-    console.log("Existing Other Images to Remove Count:", removedOtherImagesPublicIds.length)
-    console.log("Main Image Public ID to Remove:", mainImagePublicIdToRemove)
+    console.log("New Images Count:", images.length)
+    console.log("Existing Images to Remove Count:", removedImages.length)
     if (editingProduct) {
       console.log("Editing Product ID:", editingProduct._id)
     }
@@ -280,46 +248,34 @@ export default function AdminProductUpload() {
     }
   }
 
-  const handleEdit = useCallback(
-    (product) => {
-      setEditingProduct(product)
-      setName(product.title)
-      setProductType(product.productType || "")
-
-      const parsedVariants = product.variants
-        .map((v) => {
-          const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
-          if (!match) return null
-          const [, sizeValue, sizeUnit] = match
-          return {
-            sizeValue,
-            sizeUnit,
-            price: v.price,
-            discountPercent: v.discountPercent || "",
-            finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
-            stock: v.stock,
-          }
-        })
-        .filter(Boolean)
-      setVariants(parsedVariants)
-
-      // Reset all image states before populating
-      setMainImage(null)
-      setOtherImages([])
-      setRemovedOtherImagesPublicIds([])
-      setMainImagePublicIdToRemove(null)
-
-      // Populate existing images
-      setExistingMainImage(product.images?.main || null)
-      setExistingOtherImages(product.images?.others || [])
-
-      setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
-      setDescription(product.description || "")
-      setKeywordsList(product.keywords || [])
-      window.scrollTo({ top: 0, behavior: "smooth" })
-    },
-    [], // No dependencies, as it's a callback that sets state based on passed product
-  )
+  const handleEdit = (product) => {
+    setEditingProduct(product)
+    setName(product.title)
+    setProductType(product.productType || "")
+    const parsedVariants = product.variants
+      .map((v) => {
+        const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
+        if (!match) return null
+        const [, sizeValue, sizeUnit] = match
+        return {
+          sizeValue,
+          sizeUnit,
+          price: v.price,
+          discountPercent: v.discountPercent || "",
+          finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
+          stock: v.stock,
+        }
+      })
+      .filter(Boolean)
+    setVariants(parsedVariants)
+    setImages([])
+    setExistingImages(product.images?.others || [])
+    setRemovedImages([])
+    setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
+    setDescription(product.description || "")
+    setKeywordsList(product.keywords || [])
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
@@ -382,7 +338,6 @@ export default function AdminProductUpload() {
             <option value="ml">ml</option>
             <option value="li">li</option>
             <option value="g">g</option>
-            <option value="kg">kg</option>
           </select>
           <input
             type="number"
@@ -422,7 +377,6 @@ export default function AdminProductUpload() {
       <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
         + Add Variant
       </button>
-
       <div className="flex flex-wrap gap-8 mt-6">
         {/* Product Type Section */}
         <div className="flex flex-col">
@@ -453,7 +407,6 @@ export default function AdminProductUpload() {
             </button>
           </div>
         </div>
-
         {/* Keywords Section */}
         <div className="flex-1">
           <label className="block mb-2 font-semibold">Search Keywords</label>
@@ -490,7 +443,6 @@ export default function AdminProductUpload() {
           </p>
         </div>
       </div>
-
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
@@ -518,7 +470,6 @@ export default function AdminProductUpload() {
       <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">
         + Add Detail
       </button>
-
       <textarea
         rows={5}
         placeholder="Enter product description (optional)"
@@ -526,80 +477,45 @@ export default function AdminProductUpload() {
         onChange={(e) => setDescription(e.target.value)}
         className="w-full border p-2"
       />
-
-      {/* Image Uploads */}
-      <div className="mt-4">
-        <label className="block text-sm font-medium mb-2">Main Product Image (Required)</label>
-        <input
-          id="main-image"
-          type="file"
-          name="mainImage"
-          accept="image/*"
-          onChange={handleImageChange}
-          className="mb-2"
-        />
-        {(mainImage || existingMainImage) && (
-          <div className="relative w-48 h-48 border rounded overflow-hidden mb-4">
-            <img
-              src={mainImage ? URL.createObjectURL(mainImage) : existingMainImage?.url || "/placeholder.svg"}
-              alt="Main Image Preview"
-              className="w-full h-full object-cover"
-            />
-            <button
-              onClick={handleExistingMainImageRemove}
-              className="absolute top-1 right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full"
-            >
-              X
-            </button>
-          </div>
-        )}
-
-        <label className="block text-sm font-medium mb-2">Other Product Images (Optional, Max 9)</label>
-        <input
-          id="other-images"
-          type="file"
-          name="otherImages"
-          multiple
-          accept="image/*"
-          onChange={handleImageChange}
-          className="mb-2"
-        />
-        {(otherImages.length > 0 || existingOtherImages.length > 0) && (
-          <div className="grid grid-cols-4 gap-2 mt-4">
-            {existingOtherImages.map((img, i) => (
-              <div key={img.public_id || i} className="relative">
-                <img
-                  src={img.url || "/placeholder.svg"}
-                  alt={`Existing other image ${i}`}
-                  className="w-full h-24 object-cover rounded"
-                />
-                <button
-                  onClick={() => handleExistingOtherImageRemove(img.public_id)}
-                  className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
-                >
-                  X
-                </button>
-              </div>
-            ))}
-            {otherImages.map((img, i) => (
-              <div key={`new-${i}`} className="relative">
-                <img
-                  src={URL.createObjectURL(img) || "/placeholder.svg"}
-                  alt={`New other image ${i}`}
-                  className="w-full h-24 object-cover rounded"
-                />
-                <button
-                  onClick={() => removeNewOtherImage(i)}
-                  className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
-                >
-                  X
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
+      <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
+      {images.length > 0 && (
+        <div className="grid grid-cols-4 gap-2 mt-4">
+          {images.map((img, i) => (
+            <div key={i} className="relative">
+              <img
+                src={URL.createObjectURL(img) || "/placeholder.svg"}
+                alt={`New image ${i}`}
+                className="w-full h-24 object-cover rounded"
+              />
+              <button
+                onClick={() => removeNewImage(i)}
+                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
+              >
+                X
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {existingImages.length > 0 && (
+        <div className="grid grid-cols-4 gap-2 mt-4">
+          {existingImages.map((img, i) => (
+            <div key={i} className="relative">
+              <img
+                src={img.url || "/placeholder.svg"}
+                alt={`Existing image ${i}`}
+                className="w-full h-24 object-cover rounded"
+              />
+              <button
+                onClick={() => handleImageRemove(img.public_id)}
+                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
+              >
+                X
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
       <button
         onClick={handleSubmit}
         className={`mt-6 ${editingProduct ? "bg-orange-500" : "bg-green-600"} text-white px-4 py-2 rounded`}
@@ -611,7 +527,6 @@ export default function AdminProductUpload() {
           Cancel
         </button>
       )}
-
       <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
       <input
         type="text"
@@ -627,10 +542,9 @@ export default function AdminProductUpload() {
             <div key={product._id} className="border p-4 rounded shadow">
               <img
                 src={
-                  product.images.main?.url ||
-                  product.images.others?.[0]?.url ||
-                  "/placeholder.svg?height=150&width=150" ||
-                  "/placeholder.svg"
+                  product?.images?.others?.[0]?.url
+                    ? product.images.others[0].url
+                    : "/placeholder.svg?height=150&width=150"
                 }
                 alt={product.title}
                 className="w-full h-40 object-cover mb-2 rounded"
