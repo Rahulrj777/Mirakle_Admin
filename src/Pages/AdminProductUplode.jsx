@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -10,10 +9,8 @@ export default function AdminProductUpload() {
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
   ])
   const [images, setImages] = useState([]) // For new files to upload
-  // ✅ MODIFIED: existingImages now stores objects { url: string, public_id: string }
-  const [existingImages, setExistingImages] = useState([])
-  // ✅ MODIFIED: removedImages now stores public_ids
-  const [removedImages, setRemovedImages] = useState([])
+  const [existingImages, setExistingImages] = useState([]) // For images already on Cloudinary
+  const [removedImages, setRemovedImages] = useState([]) // Stores public_ids to remove
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -62,7 +59,6 @@ export default function AdminProductUpload() {
     }
   }
 
-  // ✅ MODIFIED: handleImageRemove now takes the public_id
   const handleImageRemove = (publicId) => {
     setRemovedImages((prev) => [...prev, publicId])
     setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
@@ -169,7 +165,6 @@ export default function AdminProductUpload() {
       alert("Please select a product type.")
       return
     }
-    // ✅ NEW: Check if there are any images (new or existing)
     if (images.length === 0 && existingImages.length === 0) {
       alert("Please upload at least one image for the product.")
       return
@@ -196,10 +191,14 @@ export default function AdminProductUpload() {
     formData.append("details", JSON.stringify(detailsObject))
     formData.append("keywords", JSON.stringify(keywordsList))
     formData.append("productType", productType)
-    images.forEach((img) => formData.append("images", img)) // Append new image files
+
+    images.forEach((img) => formData.append("images", img))
+
+    if (removedImages.length > 0) {
+      formData.append("removedImages", JSON.stringify(removedImages))
+    }
 
     const token = localStorage.getItem("authToken")
-
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)
     console.log("Product Type:", productType)
@@ -209,10 +208,8 @@ export default function AdminProductUpload() {
     console.log("Keywords:", keywordsList)
     console.log("New Images Count:", images.length)
     console.log("Existing Images to Remove Count:", removedImages.length)
-
     if (editingProduct) {
       console.log("Editing Product ID:", editingProduct._id)
-      formData.append("removedImages", JSON.stringify(removedImages)) // Send public_ids to remove
     }
     console.log("Token:", token ? "Present" : "Missing")
     console.log("-----------------------------")
@@ -271,8 +268,7 @@ export default function AdminProductUpload() {
       })
       .filter(Boolean)
     setVariants(parsedVariants)
-    setImages([]) // Clear new images when editing
-    // ✅ MODIFIED: Set existingImages with the new object structure
+    setImages([])
     setExistingImages(product.images?.others || [])
     setRemovedImages([])
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
@@ -381,7 +377,6 @@ export default function AdminProductUpload() {
       <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
         + Add Variant
       </button>
-
       <div className="flex flex-wrap gap-8 mt-6">
         {/* Product Type Section */}
         <div className="flex flex-col">
@@ -412,7 +407,6 @@ export default function AdminProductUpload() {
             </button>
           </div>
         </div>
-
         {/* Keywords Section */}
         <div className="flex-1">
           <label className="block mb-2 font-semibold">Search Keywords</label>
@@ -449,7 +443,6 @@ export default function AdminProductUpload() {
           </p>
         </div>
       </div>
-
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
@@ -508,13 +501,11 @@ export default function AdminProductUpload() {
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
             <div key={i} className="relative">
-              {/* ✅ MODIFIED: Use img.url for existing images */}
               <img
                 src={img.url || "/placeholder.svg"}
                 alt={`Existing image ${i}`}
                 className="w-full h-24 object-cover rounded"
               />
-              {/* ✅ MODIFIED: Pass img.public_id to handleImageRemove */}
               <button
                 onClick={() => handleImageRemove(img.public_id)}
                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
@@ -536,7 +527,6 @@ export default function AdminProductUpload() {
           Cancel
         </button>
       )}
-
       <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
       <input
         type="text"
@@ -550,7 +540,6 @@ export default function AdminProductUpload() {
           .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
           .map((product) => (
             <div key={product._id} className="border p-4 rounded shadow">
-              {/* ✅ MODIFIED: Use product.images.others[0].url */}
               <img
                 src={
                   product?.images?.others?.[0]?.url
