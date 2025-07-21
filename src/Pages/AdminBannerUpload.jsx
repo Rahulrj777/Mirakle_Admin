@@ -787,8 +787,12 @@ const AdminBannerUpload = () => {
         {filteredBanners.map((banner) => (
           <div key={banner._id} className="border p-3 rounded shadow relative">
             <img
-              src={banner.imageUrl || "/placeholder.svg"}
-              alt={banner.title || banner.type}
+              src={
+                banner.imageUrl || 
+                banner.product?.images?.others?.[0]?.url || 
+                "/placeholder.svg"
+              }
+              alt={banner.title || banner.product?.title || banner.type}
               className="w-full h-40 object-cover rounded mb-2"
             />
             {banner.discountPercent > 0 && (
