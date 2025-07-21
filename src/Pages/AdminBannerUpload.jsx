@@ -512,8 +512,6 @@ const AdminBannerUpload = () => {
                     const product = products.find((p) => p._id === productId)
                     const variant = product?.variants?.[0]
                     if (!product || !variant) return null
-                    console.log("🖼️ Product Image Object:", product.images?.others?.[0]);
-
                     return (
                       <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
                         {product.images?.others?.[0]?.url && (
@@ -832,12 +830,14 @@ const AdminBannerUpload = () => {
               <div className="text-red-500 text-center text-xs mt-1">Up to {banner.linkedDiscountUpTo}% Discount</div>
             )}
             <div className="mt-3 text-center flex justify-center gap-2">
-              <button
+              {type === "offerbanner" &&(
+                <button
                 onClick={() => handleEdit(banner)}
                 className="bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600"
               >
                 Edit
               </button>
+              )}
               <button
                 onClick={() => handleDelete(banner._id, banner.type)}
                 className="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600"
