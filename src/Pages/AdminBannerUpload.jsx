@@ -166,7 +166,7 @@ const AdminBannerUpload = () => {
           }
           if (!product || !variant) continue
 
-          const productImageUrl = product.images?.others?.[0] || ""
+          const productImageUrl = product.images?.others?.[0]?.url || ""
           if (!productImageUrl) {
             console.warn(`Skipping product ${product.title}: No image URL found.`)
             continue
