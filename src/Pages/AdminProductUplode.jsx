@@ -212,6 +212,7 @@ export default function AdminProductUpload() {
     }
     console.log("Token:", token ? "Present" : "Missing")
     console.log("-----------------------------")
+    console.log("Token:", token)
 
     if (!token) {
       alert("Authentication token is missing. Please log in.")
