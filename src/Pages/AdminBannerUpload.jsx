@@ -741,11 +741,6 @@ const AdminBannerUpload = () => {
               )}
             </div>
           )}
-          console.log("🔍 Banner Type:", type);
-          console.log("📦 image (new upload):", image);
-          console.log("📝 editingBanner:", editingBanner);
-          console.log("🖼️ editingBanner.imageUrl:", editingBanner?.imageUrl);
-          console.log("🖼️ Product Image:", editingBanner?.product?.images?.others?.[0]?.url);
           {(type === "homebanner" || type === "category" || type === "offerbanner") &&
             (image || (editingBanner && editingBanner.imageUrl)) && (
               <img
