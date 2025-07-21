@@ -745,7 +745,8 @@ const AdminBannerUpload = () => {
          {(type === "homebanner" || type === "category" || type === "offerbanner" || type === "producttypebanner") &&
             (image ||
               (editingBanner &&
-                (editingBanner.imageUrl || editingBanner.product?.images?.others?.[0]?.url))) && (
+                (editingBanner.imageUrl ||
+                  editingBanner.product?.images?.others?.[0]?.url))) && (
               <img
                 src={
                   image
@@ -758,7 +759,6 @@ const AdminBannerUpload = () => {
                 className="mb-4 w-full h-64 object-cover rounded border"
               />
           )}
-
           <button
             onClick={handleUpload}
             className={`px-4 py-2 rounded text-white ${isUploadEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
