@@ -154,19 +154,22 @@ export default function AdminProductUpload() {
   }
 
   const handleSubmit = async () => {
-    console.log("🔘 Submit button clicked")
+    console.log("🔘 Submit button clicked");
+
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
-      alert("Product name and current price are required")
-      console.warn("❌ Validation failed", { name, variants })
-      return
+      alert("Product name and price are required.");
+      console.warn("❌ Validation failed", { name, variants });
+      return;
     }
+
     if (!productType) {
-      alert("Please select a product type.")
-      return
+      alert("Please select a product type.");
+      return;
     }
+
     if (images.length === 0 && existingImages.length === 0) {
-      alert("Please upload at least one image for the product.")
-      return
+      alert("Please upload at least one product image.");
+      return;
     }
 
     const preparedVariants = variants.map((v) => ({
@@ -174,79 +177,88 @@ export default function AdminProductUpload() {
       price: Number.parseFloat(v.price),
       discountPercent: Number.parseFloat(v.discountPercent),
       stock: Number.parseInt(v.stock),
-    }))
+    }));
 
-    const detailsObject = {}
+    const detailsObject = {};
     detailsList.forEach((item) => {
       if (item.key && item.value) {
-        detailsObject[item.key] = item.value
+        detailsObject[item.key] = item.value;
       }
-    })
+    });
 
-    const formData = new FormData()
-    formData.append("name", name)
-    formData.append("variants", JSON.stringify(preparedVariants))
-    formData.append("description", description)
-    formData.append("details", JSON.stringify(detailsObject))
-    formData.append("keywords", JSON.stringify(keywordsList))
-    formData.append("productType", productType)
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("variants", JSON.stringify(preparedVariants));
+    formData.append("description", description);
+    formData.append("details", JSON.stringify(detailsObject));
+    formData.append("keywords", JSON.stringify(keywordsList));
+    formData.append("productType", productType);
 
-    images.forEach((img) => formData.append("images", img))
+    images.forEach((img) => formData.append("images", img));
 
     if (removedImages.length > 0) {
-      formData.append("removedImages", JSON.stringify(removedImages))
+      formData.append("removedImages", JSON.stringify(removedImages));
     }
 
-    const token = localStorage.getItem("authToken")
-    console.log("--- Submitting Product Data ---")
-    console.log("Name:", name)
-    console.log("Product Type:", productType)
-    console.log("Variants:", preparedVariants)
-    console.log("Description:", description)
-    console.log("Details:", detailsObject)
-    console.log("Keywords:", keywordsList)
-    console.log("New Images Count:", images.length)
-    console.log("Existing Images to Remove Count:", removedImages.length)
+    const token = localStorage.getItem("authToken");
+
+    console.log("--- Submitting Product ---");
+    console.log("📝 Name:", name);
+    console.log("📦 Product Type:", productType);
+    console.log("🔢 Variants:", preparedVariants);
+    console.log("🧾 Description:", description);
+    console.log("📋 Details:", detailsObject);
+    console.log("🏷️ Keywords:", keywordsList);
+    console.log("🖼️ New Images:", images.length);
+    console.log("🗑️ Images to Remove:", removedImages.length);
     if (editingProduct) {
-      console.log("Editing Product ID:", editingProduct._id)
+      console.log("✏️ Editing Product ID:", editingProduct._id);
     }
-    console.log("Token:", token ? "Present" : "Missing")
-    console.log("-----------------------------")
-    console.log("Token:", token)
+    console.log("🔐 Token:", token ? "Present" : "Missing");
+    console.log("---------------------------");
 
     if (!token) {
-      alert("Authentication token is missing. Please log in.")
-      return
+      alert("Authentication failed. Please log in again.");
+      return;
     }
 
     try {
-      let res
+      let res;
       if (editingProduct) {
-        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        alert("✅ Product updated")
-        console.log("🟢 Updated:", res.data)
+        res = await axios.put(
+          `${API_BASE}/api/products/update/${editingProduct._id}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        alert("✅ Product updated successfully.");
+        console.log("🟢 Updated:", res.data);
       } else {
-        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        alert("✅ Product uploaded")
-        console.log("🟢 Uploaded:", res.data)
+        res = await axios.post(
+          `${API_BASE}/api/products/upload-product`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        alert("✅ Product uploaded successfully.");
+        console.log("🟢 Uploaded:", res.data);
       }
-      resetForm()
-      fetchProducts()
+
+      resetForm();
+      fetchProducts();
     } catch (err) {
-      console.error("❌ Operation error:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Operation failed")
+      console.error("❌ Submission error:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Something went wrong. Please try again.");
     }
-  }
+  };
 
   const handleEdit = (product) => {
     setEditingProduct(product)
