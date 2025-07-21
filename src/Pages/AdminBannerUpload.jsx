@@ -725,7 +725,6 @@ const AdminBannerUpload = () => {
               </div>
             </>
           )}
-
           {(type === "homebanner" || type === "category" || type === "offerbanner") && (
             <div className="flex items-center gap-2 mb-4">
               <input
@@ -742,19 +741,15 @@ const AdminBannerUpload = () => {
               )}
             </div>
           )}
-         {(type === "homebanner" || type === "category" || type === "offerbanner" || type === "producttypebanner") &&
-            (image ||
-              (editingBanner &&
-                (editingBanner.imageUrl ||
-                  editingBanner.product?.images?.others?.[0]?.url))) && (
+          console.log("🔍 Banner Type:", type);
+          console.log("📦 image (new upload):", image);
+          console.log("📝 editingBanner:", editingBanner);
+          console.log("🖼️ editingBanner.imageUrl:", editingBanner?.imageUrl);
+          console.log("🖼️ Product Image:", editingBanner?.product?.images?.others?.[0]?.url);
+          {(type === "homebanner" || type === "category" || type === "offerbanner") &&
+            (image || (editingBanner && editingBanner.imageUrl)) && (
               <img
-                src={
-                  image
-                    ? URL.createObjectURL(image)
-                    : editingBanner.imageUrl ||
-                      editingBanner.product?.images?.others?.[0]?.url ||
-                      "/placeholder.svg"
-                }
+                src={image ? URL.createObjectURL(image) : editingBanner.imageUrl || "/placeholder.svg"}
                 alt="Preview"
                 className="mb-4 w-full h-64 object-cover rounded border"
               />
