@@ -742,10 +742,18 @@ const AdminBannerUpload = () => {
               )}
             </div>
           )}
-          {(type === "homebanner" || type === "category" || type === "offerbanner") &&
-            (image || (editingBanner && editingBanner.imageUrl)) && (
+         {(type === "homebanner" || type === "category" || type === "offerbanner" || type === "producttypebanner") &&
+            (image ||
+              (editingBanner &&
+                (editingBanner.imageUrl || editingBanner.product?.images?.others?.[0]?.url))) && (
               <img
-                src={image ? URL.createObjectURL(image) : editingBanner.imageUrl || "/placeholder.svg"}
+                src={
+                  image
+                    ? URL.createObjectURL(image)
+                    : editingBanner.imageUrl ||
+                      editingBanner.product?.images?.others?.[0]?.url ||
+                      "/placeholder.svg"
+                }
                 alt="Preview"
                 className="mb-4 w-full h-64 object-cover rounded border"
               />
