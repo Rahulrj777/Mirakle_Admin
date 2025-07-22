@@ -26,7 +26,7 @@ export default function LoginPage() {
       localStorage.setItem("admin", JSON.stringify(res.data.admin));
 
       alert("Login successful!");
-      navigate("/admin");
+      navigate("/admin/banners");
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
       setError(err.response?.data?.message || "Login failed. Please check your credentials.");
