@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
-import AdminLayout from "../Components/AdminLayout";
+import AdminLayout from "../Componenets/AdminLayout";
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
