@@ -1,7 +1,9 @@
+"use client"
+
 import { useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
-import { API_BASE } from "../utils/api" 
+import { API_BASE } from "../utils/api"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -12,14 +14,17 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
-
     try {
-      const res = await axios.post(`${API_BASE}/api/login`, { email, password })
-      localStorage.setItem("authToken", res.data.token)
+      // 🔥 FIX: Use admin login endpoint
+      const res = await axios.post(`${API_BASE}/api/admin/login`, { email, password })
+
+      // 🔥 FIX: Store as adminToken to match product upload code
+      localStorage.setItem("adminToken", res.data.token)
+      localStorage.setItem("authToken", res.data.token) // Keep both for compatibility
       localStorage.setItem("user", JSON.stringify(res.data.admin))
+
       alert("Login successful!")
       console.log("Login successful:", res.data)
-
       navigate("/admin")
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message)

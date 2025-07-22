@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from "react"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
@@ -13,12 +15,12 @@ export default function SignUpPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError("")
-
     try {
-      const res = await axios.post(`${API_BASE}/api/signup`, { name, email, password })
+      // 🔥 FIX: Use admin signup endpoint
+      const res = await axios.post(`${API_BASE}/api/admin/signup`, { name, email, password })
       alert(res.data.message || "Registration successful! Please log in.")
       console.log("Signup successful:", res.data)
-      navigate("/login") // Redirect to login page after successful signup
+      navigate("/login")
     } catch (err) {
       console.error("Signup error:", err.response?.data || err.message)
       setError(err.response?.data?.message || "Registration failed. Please try again.")
