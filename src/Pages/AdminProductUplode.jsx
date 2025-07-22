@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -197,7 +199,8 @@ export default function AdminProductUpload() {
       formData.append("removedImages", JSON.stringify(removedImages))
     }
 
-    const token = localStorage.getItem("authToken")
+    // 🔥 FIX: Use adminToken instead of authToken
+    const token = localStorage.getItem("adminToken")
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)
     console.log("Product Type:", productType)
@@ -210,12 +213,11 @@ export default function AdminProductUpload() {
     if (editingProduct) {
       console.log("Editing Product ID:", editingProduct._id)
     }
-    console.log("Token:", token ? "Present" : "Missing")
+    console.log("Admin Token:", token ? "Present" : "Missing")
     console.log("-----------------------------")
-    console.log("🟡 Using token for update:", token);
 
     if (!token) {
-      alert("Authentication token is missing. Please log in.")
+      alert("Admin authentication token is missing. Please log in as admin.")
       return
     }
 
@@ -280,7 +282,8 @@ export default function AdminProductUpload() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
     try {
-      const token = localStorage.getItem("authToken")
+      // 🔥 FIX: Use adminToken instead of authToken
+      const token = localStorage.getItem("adminToken")
       await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -294,7 +297,8 @@ export default function AdminProductUpload() {
 
   const toggleStock = async (id, currentStatus) => {
     try {
-      const token = localStorage.getItem("authToken")
+      // 🔥 FIX: Use adminToken instead of authToken
+      const token = localStorage.getItem("adminToken")
       await axios.put(
         `${API_BASE}/api/products/toggle-stock/${id}`,
         {
@@ -377,6 +381,7 @@ export default function AdminProductUpload() {
       <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
         + Add Variant
       </button>
+
       <div className="flex flex-wrap gap-8 mt-6">
         {/* Product Type Section */}
         <div className="flex flex-col">
@@ -443,6 +448,7 @@ export default function AdminProductUpload() {
           </p>
         </div>
       </div>
+
       <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
       {detailsList.map((item, index) => (
         <div key={index} className="grid grid-cols-3 gap-2 mb-2">
@@ -470,6 +476,7 @@ export default function AdminProductUpload() {
       <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">
         + Add Detail
       </button>
+
       <textarea
         rows={5}
         placeholder="Enter product description (optional)"
@@ -477,7 +484,9 @@ export default function AdminProductUpload() {
         onChange={(e) => setDescription(e.target.value)}
         className="w-full border p-2"
       />
+
       <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
+
       {images.length > 0 && (
         <div className="grid grid-cols-4 gap-2 mt-4">
           {images.map((img, i) => (
@@ -497,6 +506,7 @@ export default function AdminProductUpload() {
           ))}
         </div>
       )}
+
       {existingImages.length > 0 && (
         <div className="grid grid-cols-4 gap-2 mt-4">
           {existingImages.map((img, i) => (
@@ -516,17 +526,20 @@ export default function AdminProductUpload() {
           ))}
         </div>
       )}
+
       <button
         onClick={handleSubmit}
         className={`mt-6 ${editingProduct ? "bg-orange-500" : "bg-green-600"} text-white px-4 py-2 rounded`}
       >
         {editingProduct ? "Update Product" : "Upload Product"}
       </button>
+
       {editingProduct && (
         <button onClick={resetForm} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
           Cancel
         </button>
       )}
+
       <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
       <input
         type="text"
@@ -535,6 +548,7 @@ export default function AdminProductUpload() {
         onChange={(e) => setSearchTerm(e.target.value)}
         className="p-2 border w-full mb-4"
       />
+
       <div className="grid md:grid-cols-3 gap-4">
         {products
           .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
