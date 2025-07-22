@@ -13,18 +13,18 @@ const AdminLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-800 text-white p-6 space-y-6 flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
-        <button onClick={() => navigate("/admin")} className="text-left hover:bg-gray-700 p-2 rounded">
-          Dashboard
-        </button>
-        <button onClick={() => navigate("/admin/products")} className="text-left hover:bg-gray-700 p-2 rounded">
-          Products
-        </button>
-        <button onClick={() => navigate("/admin/banners")} className="text-left hover:bg-gray-700 p-2 rounded">
-          Banners
-        </button>
-      </aside>
+        <aside className="w-64 bg-white text-gray-800 p-6 space-y-6 flex flex-col border-r border-gray-200">
+            <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
+            <button onClick={() => navigate("/admin")} className="text-left hover:bg-gray-100 p-2 rounded">
+                Dashboard
+            </button>
+            <button onClick={() => navigate("/admin/products")} className="text-left hover:bg-gray-100 p-2 rounded">
+                Products
+            </button>
+            <button onClick={() => navigate("/admin/banners")} className="text-left hover:bg-gray-100 p-2 rounded">
+                Banners
+            </button>
+        </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
