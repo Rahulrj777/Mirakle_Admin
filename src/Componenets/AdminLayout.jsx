@@ -13,7 +13,7 @@ const AdminLayout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar */}
-        <aside className="w-64 bg-white text-gray-800 p-6 space-y-6 flex flex-col border-r border-gray-200">
+        <aside className="w-60 bg-white text-gray-800 p-6 space-y-6 flex flex-col border-r border-gray-200 fixed">
             <h2 className="text-2xl font-bold mb-4">Admin Panel</h2>
             <button onClick={() => navigate("/admin")} className="text-left hover:bg-gray-100 p-2 rounded">
                 Dashboard
