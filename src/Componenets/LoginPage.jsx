@@ -11,7 +11,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (localStorage.getItem("adminToken")) {
-      navigate("/admin");
+      navigate("/admin/banners");
     }
   }, [navigate]);
 
