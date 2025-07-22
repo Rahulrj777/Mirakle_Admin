@@ -32,7 +32,7 @@ const Routing = () => {
         path="/"
         element={
           localStorage.getItem("authToken")
-            ? <Navigate to="/admin/products" replace />
+            ? <Navigate to="/admin/banners" replace />
             : <Navigate to="/login" replace />
         }
       />
