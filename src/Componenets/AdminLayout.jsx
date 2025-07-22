@@ -45,15 +45,6 @@ const AdminLayout = ({ children }) => {
           Logout
         </button>
       </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 ml-60 flex flex-col min-h-screen">
-        <header className="flex justify-between items-center bg-white p-4 shadow">
-          <h1 className="text-xl font-bold">Welcome Admin</h1>
-        </header>
-
-        <main className="p-6 flex-1 overflow-y-auto">{children}</main>
-      </div>
     </div>
   );
 };
