@@ -3,17 +3,17 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { API_BASE } from "../utils/api";
 
-useEffect(() => {
-  if (localStorage.getItem("adminToken")) {
-    navigate("/admin");
-  }
-}, [navigate]);
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem("adminToken")) {
+      navigate("/admin");
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
