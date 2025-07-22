@@ -1,4 +1,4 @@
-import AdminLayout from "../Components/AdminLayout";
+import AdminLayout from "../Componenets/AdminLayout";
 import { Link } from "react-router-dom";
 
 const AdminHome = () => {
