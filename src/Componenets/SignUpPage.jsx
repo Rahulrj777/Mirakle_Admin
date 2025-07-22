@@ -15,21 +15,18 @@ export default function SignUpPage() {
     setError("");
     try {
       const res = await axios.post(`${API_BASE}/api/admin/signup`, { name, email, password });
-
-      alert(res.data.message || "Admin account created successfully!");
-      console.log("Signup successful:", res.data);
-
-      // Optional: Auto-login after signup
-      localStorage.setItem("adminToken", res.data.token);
-      localStorage.setItem("admin", JSON.stringify(res.data.admin));
-
-      navigate("/admin");
+      alert(res.data.message || "Registration successful! Please log in.");
+      navigate("/login");
     } catch (err) {
-      console.error("Signup error:", err.response?.data || err.message);
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      if (err.response?.status === 403) {
+        alert("Admin already exists. Redirecting to login...");
+        navigate("/login");
+      } else {
+        setError(err.response?.data?.message || "Signup failed. Please try again.");
+      }
     }
   };
-
+  
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
