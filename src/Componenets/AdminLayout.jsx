@@ -11,7 +11,6 @@ const AdminLayout = ({ children }) => {
     navigate("/login");
   };
 
-  // Helper to check active path
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -45,6 +44,11 @@ const AdminLayout = ({ children }) => {
           Logout
         </button>
       </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 ml-60 flex flex-col min-h-screen">
+        <main className="p-6 flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 };
