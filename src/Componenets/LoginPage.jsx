@@ -16,7 +16,7 @@ export default function LoginPage() {
     try {
       const res = await axios.post(`${API_BASE}/api/login`, { email, password })
       localStorage.setItem("authToken", res.data.token)
-      localStorage.setItem("user", JSON.stringify(res.data.user))
+      localStorage.setItem("user", JSON.stringify(res.data.admin))
       alert("Login successful!")
       console.log("Login successful:", res.data)
 
