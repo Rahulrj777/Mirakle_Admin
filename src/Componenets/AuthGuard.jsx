@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom"
 
 const AuthGuard = ({ children }) => {
-  const token = localStorage.getItem("authToken")
+  const token = localStorage.getItem("adminToken")
   window.location.href = "/login"; 
   if (!token) {
     return <Navigate to="/login" replace />

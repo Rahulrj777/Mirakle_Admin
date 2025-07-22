@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
+import AdminLayout from "../Components/AdminLayout";
 
 const AdminBannerUpload = () => {
   const [image, setImage] = useState(null)
@@ -393,469 +394,471 @@ const AdminBannerUpload = () => {
   const selectedVariant = getSelectedVariant()
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">
-        {editingBanner ? `Edit ${editingBanner.type.replace("banner", " Banner")}` : "Admin Banner Upload Panel"}
-      </h2>
-      <select
-        value={type}
-        onChange={(e) => setType(e.target.value)}
-        className="border p-2 w-full mb-4"
-        disabled={!!editingBanner}
-      >
-        <option value="all">Show All (View Only)</option>
-        <option value="homebanner">Main Banner</option>
-        <option value="category">Category Banner</option>
-        <option value="offerbanner">Offer Zone Banner</option>
-        <option value="product-type">Our Special Product's Banner</option>
-      </select>
+    <AdminLayout>
+      <div className="p-6 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-bold mb-4">
+          {editingBanner ? `Edit ${editingBanner.type.replace("banner", " Banner")}` : "Admin Banner Upload Panel"}
+        </h2>
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="border p-2 w-full mb-4"
+          disabled={!!editingBanner}
+        >
+          <option value="all">Show All (View Only)</option>
+          <option value="homebanner">Main Banner</option>
+          <option value="category">Category Banner</option>
+          <option value="offerbanner">Offer Zone Banner</option>
+          <option value="product-type">Our Special Product's Banner</option>
+        </select>
 
-      {type !== "all" && (
-        <div className="bg-white shadow p-4 rounded mb-6">
-          {type === "product-type" && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Select Product(s):</label>
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={productSearchTerm}
-                onChange={(e) => setProductSearchTerm(e.target.value)}
-                className="mb-2 p-2 border w-full rounded"
-              />
-              <div className="mb-3">
-                <label className="block text-sm font-medium mb-2">Select Products (Max 10):</label>
-                <div className="max-h-60 overflow-y-auto border rounded p-2">
-                  {filteredProducts.map((product) => {
-                    const isProductBannerExisting = banners.some(
-                      (b) => b.type === "product-type" && b.productId === product._id,
-                    )
-                    return (
-                      <label
-                        key={product._id}
-                        className={`flex items-center gap-2 mb-2 cursor-pointer ${isProductBannerExisting && !editingBanner ? "opacity-50 cursor-not-allowed" : ""}`}
-                      >
-                        <input
-                          type="checkbox"
-                          value={product._id}
-                          checked={selectedProductIds.includes(product._id)}
-                          onChange={(e) => {
-                            const checked = e.target.checked
-                            const value = e.target.value
-                            setSelectedVariantIndex(0)
-                            setSelectedProductIds((prevIds) => {
-                              const maxSelections = 10
-                              if (checked) {
-                                if (prevIds.includes(value)) return prevIds
-                                if (prevIds.length >= maxSelections) {
-                                  alert(`You can select a maximum of ${maxSelections} products only.`)
-                                  return prevIds
-                                }
-                                return [...prevIds, value]
-                              } else {
-                                return prevIds.filter((id) => id !== value)
-                              }
-                            })
-                          }}
-                          disabled={isProductBannerExisting && !editingBanner}
-                          className="accent-green-600"
-                        />
-                        <span className="text-sm">
-                          {product.title} {isProductBannerExisting && "(Banner Exists)"}
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-              {selectedProductIds.length === 1 && selectedProduct?.variants?.length > 1 && (
-                <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1">Select Variant:</label>
-                  <select
-                    value={selectedVariantIndex}
-                    onChange={(e) => setSelectedVariantIndex(Number(e.target.value))}
-                    className="p-2 border w-full"
-                  >
-                    {selectedProduct.variants.map((variant, index) => (
-                      <option key={index} value={index}>
-                        {variant.size} - ₹{variant.price}
-                        {variant.discountPercent > 0 && ` (${variant.discountPercent}% OFF)`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {selectedProductIds.length === 1 && selectedProduct && selectedVariant && (
-                <div className="bg-gray-50 p-3 rounded border">
-                  <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
-                  <div className="flex gap-3">
-                    {selectedProduct.images?.others?.[0]?.url && (
-                      <img
-                        src={selectedProduct.images.others[0].url}
-                        alt={selectedProduct.title}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    )}
-                    <div className="text-sm">
-                      <p className="font-medium">{selectedProduct.title}</p>
-                      <p className="text-gray-600">{selectedVariant.size}</p>
-                      <p className="text-green-600 font-semibold">₹{selectedVariant.price}</p>
-                      {selectedVariant.discountPercent > 0 && (
-                        <p className="text-red-500 text-xs">{selectedVariant.discountPercent}% OFF</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-              {selectedProductIds.length > 1 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                  {selectedProductIds.map((productId) => {
-                    const product = products.find((p) => p._id === productId)
-                    const variant = product?.variants?.[0]
-                    if (!product || !variant) return null
-                    return (
-                      <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
-                        {product.images?.others?.[0]?.url && (
-                          <img
-                            src={product.images.others[0].url}
-                            alt={product.title}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        )}
-                        <div className="text-sm">
-                          <p className="font-medium">{product.title}</p>
-                          <p className="text-gray-600">{variant.size}</p>
-                          <p className="text-green-600 font-semibold">₹{variant.price}</p>
-                          {variant.discountPercent > 0 && (
-                            <p className="text-red-500 text-xs">{variant.discountPercent}% OFF</p>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {type === "category" && (
-            <>
+        {type !== "all" && (
+          <div className="bg-white shadow p-4 rounded mb-6">
+            {type === "product-type" && (
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Select Category Type:</label>
-                <select
-                  value={selectedCategoryType}
-                  onChange={(e) => setSelectedCategoryType(e.target.value)}
-                  className="p-2 border w-full rounded"
-                >
-                  <option value="">Select a product category</option>
-                  {availableProductTypes.map((typeOption, index) => {
-                    const isCategoryBannerExisting = banners.some(
-                      (b) => b.type === "category" && b.title === typeOption,
-                    )
-                    return (
-                      <option key={index} value={typeOption} disabled={isCategoryBannerExisting && !editingBanner}>
-                        {typeOption} {isCategoryBannerExisting && "(Banner Exists)"}
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-            </>
-          )}
-
-          {type === "offerbanner" && (
-            <>
-              <input
-                type="text"
-                placeholder="Enter Offer Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mb-4 p-2 border rounded w-full"
-              />
-              <input
-                type="number"
-                placeholder="Discount Percentage (e.g., 50)"
-                value={percentage}
-                onChange={(e) => setPercentage(e.target.value)}
-                className="mb-4 p-2 border rounded w-full"
-              />
-              <select
-                value={offerSlot}
-                onChange={(e) => setOfferSlot(e.target.value)}
-                className="mb-4 p-2 border rounded w-full"
-              >
-                <option value="">Select Slot</option>
-                <option
-                  value="left"
-                  disabled={
-                    offerBanners.some((b) => b.slot === "left") && (!editingBanner || editingBanner.slot !== "left")
-                  }
-                >
-                  Left Banner{" "}
-                  {offerBanners.some((b) => b.slot === "left") &&
-                    (!editingBanner || editingBanner.slot !== "left") &&
-                    "(Exists)"}
-                </option>
-                <option
-                  value="right"
-                  disabled={
-                    offerBanners.some((b) => b.slot === "right") && (!editingBanner || editingBanner.slot !== "right")
-                  }
-                >
-                  Right Banner{" "}
-                  {offerBanners.some((b) => b.slot === "right") &&
-                    (!editingBanner || editingBanner.slot !== "right") &&
-                    "(Exists)"}
-                </option>
-              </select>
-
-              {/* ✅ NEW: Offer Banner Linking Options */}
-              <div className="mb-4 p-3 border rounded bg-gray-50">
-                <label className="block text-sm font-medium mb-2">Link Offer Banner To:</label>
-                <div className="flex gap-4 mb-3">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="none"
-                      checked={offerLinkType === "none"}
-                      onChange={() => {
-                        setOfferLinkType("none")
-                        setLinkedProductForOffer(null)
-                        setLinkedCategoryForOffer("")
-                        setLinkedDiscountUpToForOffer("") // Clear discount if no link
-                      }}
-                      className="mr-2 accent-green-600"
-                    />
-                    No Specific Link
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="product"
-                      checked={offerLinkType === "product"}
-                      onChange={() => {
-                        setOfferLinkType("product")
-                        setLinkedCategoryForOffer("")
-                      }}
-                      className="mr-2 accent-green-600"
-                    />
-                    Specific Product
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="category"
-                      checked={offerLinkType === "category"}
-                      onChange={() => {
-                        setOfferLinkType("category")
-                        setLinkedProductForOffer(null)
-                      }}
-                      className="mr-2 accent-green-600"
-                    />
-                    Product Category
-                  </label>
-                </div>
-
-                {offerLinkType === "product" && (
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      placeholder="Search product to link..."
-                      value={productSearchTerm}
-                      onChange={(e) => setProductSearchTerm(e.target.value)}
-                      className="mb-2 p-2 border w-full rounded"
-                    />
-                    <div className="max-h-40 overflow-y-auto border rounded p-2">
-                      {filteredProducts.map((product) => (
-                        <label key={product._id} className="flex items-center gap-2 mb-2 cursor-pointer">
+                <label className="block text-sm font-medium mb-2">Select Product(s):</label>
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={productSearchTerm}
+                  onChange={(e) => setProductSearchTerm(e.target.value)}
+                  className="mb-2 p-2 border w-full rounded"
+                />
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-2">Select Products (Max 10):</label>
+                  <div className="max-h-60 overflow-y-auto border rounded p-2">
+                    {filteredProducts.map((product) => {
+                      const isProductBannerExisting = banners.some(
+                        (b) => b.type === "product-type" && b.productId === product._id,
+                      )
+                      return (
+                        <label
+                          key={product._id}
+                          className={`flex items-center gap-2 mb-2 cursor-pointer ${isProductBannerExisting && !editingBanner ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
                           <input
-                            type="radio"
-                            name="linkedProduct"
+                            type="checkbox"
                             value={product._id}
-                            checked={linkedProductForOffer?._id === product._id}
-                            onChange={() => setLinkedProductForOffer(product)}
-                            className="mr-2 accent-green-600"
+                            checked={selectedProductIds.includes(product._id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked
+                              const value = e.target.value
+                              setSelectedVariantIndex(0)
+                              setSelectedProductIds((prevIds) => {
+                                const maxSelections = 10
+                                if (checked) {
+                                  if (prevIds.includes(value)) return prevIds
+                                  if (prevIds.length >= maxSelections) {
+                                    alert(`You can select a maximum of ${maxSelections} products only.`)
+                                    return prevIds
+                                  }
+                                  return [...prevIds, value]
+                                } else {
+                                  return prevIds.filter((id) => id !== value)
+                                }
+                              })
+                            }}
+                            disabled={isProductBannerExisting && !editingBanner}
+                            className="accent-green-600"
                           />
-                          <span className="text-sm">{product.title}</span>
+                          <span className="text-sm">
+                            {product.title} {isProductBannerExisting && "(Banner Exists)"}
+                          </span>
                         </label>
-                      ))}
-                    </div>
-                    {linkedProductForOffer && (
-                      <div className="bg-gray-100 p-2 rounded mt-2 text-sm">
-                        Linked Product: <span className="font-semibold">{linkedProductForOffer.title}</span>
-                      </div>
-                    )}
+                      )
+                    })}
                   </div>
-                )}
-
-                {offerLinkType === "category" && (
+                </div>
+                {selectedProductIds.length === 1 && selectedProduct?.variants?.length > 1 && (
                   <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Select Category:</label>
+                    <label className="block text-sm font-medium mb-1">Select Variant:</label>
                     <select
-                      value={linkedCategoryForOffer}
-                      onChange={(e) => setLinkedCategoryForOffer(e.target.value)}
-                      className="p-2 border w-full rounded"
+                      value={selectedVariantIndex}
+                      onChange={(e) => setSelectedVariantIndex(Number(e.target.value))}
+                      className="p-2 border w-full"
                     >
-                      <option value="">Select a category</option>
-                      {availableProductTypes.map((typeOption, index) => (
-                        <option key={index} value={typeOption}>
-                          {typeOption}
+                      {selectedProduct.variants.map((variant, index) => (
+                        <option key={index} value={index}>
+                          {variant.size} - ₹{variant.price}
+                          {variant.discountPercent > 0 && ` (${variant.discountPercent}% OFF)`}
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
-
-                {(offerLinkType === "product" || offerLinkType === "category") && (
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium mb-1">Discount Up To (%):</label>
-                    <input
-                      type="number"
-                      placeholder="e.g., 25 (optional)"
-                      value={linkedDiscountUpToForOffer}
-                      onChange={(e) => setLinkedDiscountUpToForOffer(e.target.value)}
-                      className="p-2 border w-full rounded"
-                      min="0"
-                      max="100"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      If set, clicking the banner will filter products with up to this discount.
-                    </p>
+                {selectedProductIds.length === 1 && selectedProduct && selectedVariant && (
+                  <div className="bg-gray-50 p-3 rounded border">
+                    <h4 className="font-medium text-sm mb-2">Selected Product Preview:</h4>
+                    <div className="flex gap-3">
+                      {selectedProduct.images?.others?.[0]?.url && (
+                        <img
+                          src={selectedProduct.images.others[0].url}
+                          alt={selectedProduct.title}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      )}
+                      <div className="text-sm">
+                        <p className="font-medium">{selectedProduct.title}</p>
+                        <p className="text-gray-600">{selectedVariant.size}</p>
+                        <p className="text-green-600 font-semibold">₹{selectedVariant.price}</p>
+                        {selectedVariant.discountPercent > 0 && (
+                          <p className="text-red-500 text-xs">{selectedVariant.discountPercent}% OFF</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {selectedProductIds.length > 1 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    {selectedProductIds.map((productId) => {
+                      const product = products.find((p) => p._id === productId)
+                      const variant = product?.variants?.[0]
+                      if (!product || !variant) return null
+                      return (
+                        <div key={productId} className="bg-gray-100 p-3 rounded border flex items-center gap-3">
+                          {product.images?.others?.[0]?.url && (
+                            <img
+                              src={product.images.others[0].url}
+                              alt={product.title}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                          )}
+                          <div className="text-sm">
+                            <p className="font-medium">{product.title}</p>
+                            <p className="text-gray-600">{variant.size}</p>
+                            <p className="text-green-600 font-semibold">₹{variant.price}</p>
+                            {variant.discountPercent > 0 && (
+                              <p className="text-red-500 text-xs">{variant.discountPercent}% OFF</p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
-            </>
-          )}
-          {(type === "homebanner" || type === "category" || type === "offerbanner") && (
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                id={`banner-file-${type}`}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="flex-1"
-              />
-              {(image || (editingBanner && editingBanner.imageUrl)) && (
-                <button onClick={clearImage} className="bg-red-500 text-white px-3 py-1 rounded text-sm">
-                  Clear Image
-                </button>
-              )}
-            </div>
-          )}
-          {(type === "homebanner" || type === "category" || type === "offerbanner") &&
-            (image || (editingBanner && editingBanner.imageUrl)) && (
-              <img
-                src={image ? URL.createObjectURL(image) : editingBanner.imageUrl || "/placeholder.svg"}
-                alt="Preview"
-                className="mb-4 w-full h-64 object-cover rounded border"
-              />
-          )}
-          <button
-            onClick={handleUpload}
-            className={`px-4 py-2 rounded text-white ${isUploadEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
-            disabled={!isUploadEnabled}
-          >
-            {editingBanner ? "Update Banner" : "Upload Banner"}
-          </button>
-          {editingBanner && (
-            <button onClick={resetFormStates} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
-              Cancel Edit
-            </button>
-          )}
-        </div>
-      )}
-
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">
-          {type === "all"
-            ? "All Uploaded Banners"
-            : `${type === "homebanner" ? "Main Banners" : type === "category" ? "Category Banners" : type === "offerbanner" ? "Offer Zone Banners" : "Product Type Banners"} (${filteredBanners.length})`}
-        </h3>
-        {filteredBanners.length > 0 && (
-          <button
-            onClick={handleDeleteAll}
-            className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
-          >
-            {type === "all"
-              ? "Delete All Banners"
-              : `Delete All ${type === "homebanner" ? "Main" : type === "category" ? "Category" : type === "offerbanner" ? "Offer Zone" : "Product Type"} Banners`}
-          </button>
-        )}
-      </div>
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        {filteredBanners.map((banner) => (
-          <div key={banner._id} className="border p-3 rounded shadow relative">
-            <img
-              src={
-                banner.imageUrl || 
-                banner.product?.images?.others?.[0]?.url || 
-                "/placeholder.svg"
-              }
-              alt={banner.title || banner.product?.title || banner.type}
-              className="w-full h-40 object-cover rounded mb-2"
-            />
-            {banner.discountPercent > 0 && (
-              <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
-                {banner.discountPercent}% OFF
-              </span>
             )}
-            <div className="text-sm text-center font-medium mt-1">
-              {banner.title || `(${banner.type.replace("banner", " Banner")})`}
-            </div>
-            {banner.price > 0 && (
-              <div className="text-center text-sm mt-1">
-                <span className="text-green-700 font-semibold">₹ {Number(banner.price).toFixed(0)}</span>
-                {banner.oldPrice > banner.price && (
-                  <span className="text-gray-400 line-through ml-2 text-xs">
-                    ₹ {Number(banner.oldPrice).toFixed(0)}
-                  </span>
+
+            {type === "category" && (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">Select Category Type:</label>
+                  <select
+                    value={selectedCategoryType}
+                    onChange={(e) => setSelectedCategoryType(e.target.value)}
+                    className="p-2 border w-full rounded"
+                  >
+                    <option value="">Select a product category</option>
+                    {availableProductTypes.map((typeOption, index) => {
+                      const isCategoryBannerExisting = banners.some(
+                        (b) => b.type === "category" && b.title === typeOption,
+                      )
+                      return (
+                        <option key={index} value={typeOption} disabled={isCategoryBannerExisting && !editingBanner}>
+                          {typeOption} {isCategoryBannerExisting && "(Banner Exists)"}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {type === "offerbanner" && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Enter Offer Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="mb-4 p-2 border rounded w-full"
+                />
+                <input
+                  type="number"
+                  placeholder="Discount Percentage (e.g., 50)"
+                  value={percentage}
+                  onChange={(e) => setPercentage(e.target.value)}
+                  className="mb-4 p-2 border rounded w-full"
+                />
+                <select
+                  value={offerSlot}
+                  onChange={(e) => setOfferSlot(e.target.value)}
+                  className="mb-4 p-2 border rounded w-full"
+                >
+                  <option value="">Select Slot</option>
+                  <option
+                    value="left"
+                    disabled={
+                      offerBanners.some((b) => b.slot === "left") && (!editingBanner || editingBanner.slot !== "left")
+                    }
+                  >
+                    Left Banner{" "}
+                    {offerBanners.some((b) => b.slot === "left") &&
+                      (!editingBanner || editingBanner.slot !== "left") &&
+                      "(Exists)"}
+                  </option>
+                  <option
+                    value="right"
+                    disabled={
+                      offerBanners.some((b) => b.slot === "right") && (!editingBanner || editingBanner.slot !== "right")
+                    }
+                  >
+                    Right Banner{" "}
+                    {offerBanners.some((b) => b.slot === "right") &&
+                      (!editingBanner || editingBanner.slot !== "right") &&
+                      "(Exists)"}
+                  </option>
+                </select>
+
+                {/* ✅ NEW: Offer Banner Linking Options */}
+                <div className="mb-4 p-3 border rounded bg-gray-50">
+                  <label className="block text-sm font-medium mb-2">Link Offer Banner To:</label>
+                  <div className="flex gap-4 mb-3">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="none"
+                        checked={offerLinkType === "none"}
+                        onChange={() => {
+                          setOfferLinkType("none")
+                          setLinkedProductForOffer(null)
+                          setLinkedCategoryForOffer("")
+                          setLinkedDiscountUpToForOffer("") // Clear discount if no link
+                        }}
+                        className="mr-2 accent-green-600"
+                      />
+                      No Specific Link
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="product"
+                        checked={offerLinkType === "product"}
+                        onChange={() => {
+                          setOfferLinkType("product")
+                          setLinkedCategoryForOffer("")
+                        }}
+                        className="mr-2 accent-green-600"
+                      />
+                      Specific Product
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="category"
+                        checked={offerLinkType === "category"}
+                        onChange={() => {
+                          setOfferLinkType("category")
+                          setLinkedProductForOffer(null)
+                        }}
+                        className="mr-2 accent-green-600"
+                      />
+                      Product Category
+                    </label>
+                  </div>
+
+                  {offerLinkType === "product" && (
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        placeholder="Search product to link..."
+                        value={productSearchTerm}
+                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        className="mb-2 p-2 border w-full rounded"
+                      />
+                      <div className="max-h-40 overflow-y-auto border rounded p-2">
+                        {filteredProducts.map((product) => (
+                          <label key={product._id} className="flex items-center gap-2 mb-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="linkedProduct"
+                              value={product._id}
+                              checked={linkedProductForOffer?._id === product._id}
+                              onChange={() => setLinkedProductForOffer(product)}
+                              className="mr-2 accent-green-600"
+                            />
+                            <span className="text-sm">{product.title}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {linkedProductForOffer && (
+                        <div className="bg-gray-100 p-2 rounded mt-2 text-sm">
+                          Linked Product: <span className="font-semibold">{linkedProductForOffer.title}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {offerLinkType === "category" && (
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium mb-1">Select Category:</label>
+                      <select
+                        value={linkedCategoryForOffer}
+                        onChange={(e) => setLinkedCategoryForOffer(e.target.value)}
+                        className="p-2 border w-full rounded"
+                      >
+                        <option value="">Select a category</option>
+                        {availableProductTypes.map((typeOption, index) => (
+                          <option key={index} value={typeOption}>
+                            {typeOption}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {(offerLinkType === "product" || offerLinkType === "category") && (
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium mb-1">Discount Up To (%):</label>
+                      <input
+                        type="number"
+                        placeholder="e.g., 25 (optional)"
+                        value={linkedDiscountUpToForOffer}
+                        onChange={(e) => setLinkedDiscountUpToForOffer(e.target.value)}
+                        className="p-2 border w-full rounded"
+                        min="0"
+                        max="100"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        If set, clicking the banner will filter products with up to this discount.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            {(type === "homebanner" || type === "category" || type === "offerbanner") && (
+              <div className="flex items-center gap-2 mb-4">
+                <input
+                  id={`banner-file-${type}`}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="flex-1"
+                />
+                {(image || (editingBanner && editingBanner.imageUrl)) && (
+                  <button onClick={clearImage} className="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                    Clear Image
+                  </button>
                 )}
               </div>
             )}
-            {banner.weight?.value > 0 && (
-              <div className="text-gray-500 text-center text-xs">
-                {banner.weight.value} {banner.weight.unit}
-              </div>
+            {(type === "homebanner" || type === "category" || type === "offerbanner") &&
+              (image || (editingBanner && editingBanner.imageUrl)) && (
+                <img
+                  src={image ? URL.createObjectURL(image) : editingBanner.imageUrl || "/placeholder.svg"}
+                  alt="Preview"
+                  className="mb-4 w-full h-64 object-cover rounded border"
+                />
             )}
-            {banner.slot && <div className="text-gray-600 text-center text-xs mt-1">Slot: {banner.slot}</div>}
-            {banner.percentage > 0 && (
-              <div className="text-red-500 text-center text-xs mt-1">{banner.percentage}% Discount</div>
-            )}
-            {banner.linkedProductId && (
-              <div className="text-gray-600 text-center text-xs mt-1">
-                Linked Product ID: {banner.linkedProductId.slice(-6)}
-              </div>
-            )}
-            {banner.linkedCategory && (
-              <div className="text-gray-600 text-center text-xs mt-1">Linked Category: {banner.linkedCategory}</div>
-            )}
-            {banner.linkedDiscountUpTo > 0 && (
-              <div className="text-red-500 text-center text-xs mt-1">Up to {banner.linkedDiscountUpTo}% Discount</div>
-            )}
-            <div className="mt-3 text-center flex justify-center gap-2">
-              {type === "offerbanner" &&(
-                <button
-                onClick={() => handleEdit(banner)}
-                className="bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600"
-              >
-                Edit
+            <button
+              onClick={handleUpload}
+              className={`px-4 py-2 rounded text-white ${isUploadEnabled ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
+              disabled={!isUploadEnabled}
+            >
+              {editingBanner ? "Update Banner" : "Upload Banner"}
+            </button>
+            {editingBanner && (
+              <button onClick={resetFormStates} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
+                Cancel Edit
               </button>
-              )}
-              <button
-                onClick={() => handleDelete(banner._id, banner.type)}
-                className="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
+            )}
           </div>
-        ))}
-      </div>
-      {filteredBanners.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
-          <p>No banners found for the selected type.</p>
+        )}
+
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">
+            {type === "all"
+              ? "All Uploaded Banners"
+              : `${type === "homebanner" ? "Main Banners" : type === "category" ? "Category Banners" : type === "offerbanner" ? "Offer Zone Banners" : "Product Type Banners"} (${filteredBanners.length})`}
+          </h3>
+          {filteredBanners.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+            >
+              {type === "all"
+                ? "Delete All Banners"
+                : `Delete All ${type === "homebanner" ? "Main" : type === "category" ? "Category" : type === "offerbanner" ? "Offer Zone" : "Product Type"} Banners`}
+            </button>
+          )}
         </div>
-      )}
-    </div>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+          {filteredBanners.map((banner) => (
+            <div key={banner._id} className="border p-3 rounded shadow relative">
+              <img
+                src={
+                  banner.imageUrl || 
+                  banner.product?.images?.others?.[0]?.url || 
+                  "/placeholder.svg"
+                }
+                alt={banner.title || banner.product?.title || banner.type}
+                className="w-full h-40 object-cover rounded mb-2"
+              />
+              {banner.discountPercent > 0 && (
+                <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md">
+                  {banner.discountPercent}% OFF
+                </span>
+              )}
+              <div className="text-sm text-center font-medium mt-1">
+                {banner.title || `(${banner.type.replace("banner", " Banner")})`}
+              </div>
+              {banner.price > 0 && (
+                <div className="text-center text-sm mt-1">
+                  <span className="text-green-700 font-semibold">₹ {Number(banner.price).toFixed(0)}</span>
+                  {banner.oldPrice > banner.price && (
+                    <span className="text-gray-400 line-through ml-2 text-xs">
+                      ₹ {Number(banner.oldPrice).toFixed(0)}
+                    </span>
+                  )}
+                </div>
+              )}
+              {banner.weight?.value > 0 && (
+                <div className="text-gray-500 text-center text-xs">
+                  {banner.weight.value} {banner.weight.unit}
+                </div>
+              )}
+              {banner.slot && <div className="text-gray-600 text-center text-xs mt-1">Slot: {banner.slot}</div>}
+              {banner.percentage > 0 && (
+                <div className="text-red-500 text-center text-xs mt-1">{banner.percentage}% Discount</div>
+              )}
+              {banner.linkedProductId && (
+                <div className="text-gray-600 text-center text-xs mt-1">
+                  Linked Product ID: {banner.linkedProductId.slice(-6)}
+                </div>
+              )}
+              {banner.linkedCategory && (
+                <div className="text-gray-600 text-center text-xs mt-1">Linked Category: {banner.linkedCategory}</div>
+              )}
+              {banner.linkedDiscountUpTo > 0 && (
+                <div className="text-red-500 text-center text-xs mt-1">Up to {banner.linkedDiscountUpTo}% Discount</div>
+              )}
+              <div className="mt-3 text-center flex justify-center gap-2">
+                {type === "offerbanner" &&(
+                  <button
+                  onClick={() => handleEdit(banner)}
+                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600"
+                >
+                  Edit
+                </button>
+                )}
+                <button
+                  onClick={() => handleDelete(banner._id, banner.type)}
+                  className="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {filteredBanners.length === 0 && (
+          <div className="text-center text-gray-500 py-8">
+            <p>No banners found for the selected type.</p>
+          </div>
+        )}
+      </div>
+    </AdminLayout>
   )
 }
 

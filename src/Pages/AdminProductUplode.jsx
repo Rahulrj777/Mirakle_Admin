@@ -1,8 +1,7 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
+import AdminLayout from "../Componenets/AdminLayout";
 
 export default function AdminProductUpload() {
   const [name, setName] = useState("")
@@ -316,296 +315,298 @@ export default function AdminProductUpload() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
-      <input
-        type="text"
-        placeholder="Product Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="p-2 border w-full mb-4"
-      />
-      {variants.map((variant, i) => (
-        <div key={i} className="grid grid-cols-7 gap-2 mb-2">
-          <input
-            type="number"
-            placeholder="Size Value"
-            value={variant.sizeValue}
-            onChange={(e) => handleVariantChange(i, "sizeValue", e.target.value)}
-            className="p-2 border"
-          />
-          <select
-            value={variant.sizeUnit}
-            onChange={(e) => handleVariantChange(i, "sizeUnit", e.target.value)}
-            className="p-2 border"
-          >
-            <option value="ml">ml</option>
-            <option value="li">li</option>
-            <option value="g">g</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Price"
-            value={variant.price}
-            onChange={(e) => handleVariantChange(i, "price", e.target.value)}
-            className="p-2 border"
-          />
-          <input
-            type="number"
-            placeholder="Discount %"
-            value={variant.discountPercent}
-            onChange={(e) => handleVariantChange(i, "discountPercent", e.target.value)}
-            className="p-2 border"
-          />
-          <input
-            type="text"
-            value={variant.finalPrice}
-            placeholder="Final Price"
-            readOnly
-            className="p-2 border bg-gray-100"
-          />
-          <input
-            type="number"
-            placeholder="Stock"
-            value={variant.stock}
-            onChange={(e) => handleVariantChange(i, "stock", e.target.value)}
-            className="p-2 border"
-          />
-          {variants.length > 1 && (
-            <button onClick={() => removeVariant(i)} className="text-red-500">
-              Remove
-            </button>
-          )}
-        </div>
-      ))}
-      <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
-        + Add Variant
-      </button>
-
-      <div className="flex flex-wrap gap-8 mt-6">
-        {/* Product Type Section */}
-        <div className="flex flex-col">
-          <label className="block mb-2 font-semibold">Product Type</label>
-          <select
-            value={productType}
-            onChange={(e) => setProductType(e.target.value)}
-            className="p-2 border w-[180px] rounded"
-          >
-            <option value="">Select Type</option>
-            {availableProductTypes.map((typeOption, index) => (
-              <option key={index} value={typeOption}>
-                {typeOption}
-              </option>
-            ))}
-          </select>
-          <div className="mt-4 flex gap-2">
+    <AdminLayout>
+      <div className="max-w-5xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
+        <input
+          type="text"
+          placeholder="Product Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="p-2 border w-full mb-4"
+        />
+        {variants.map((variant, i) => (
+          <div key={i} className="grid grid-cols-7 gap-2 mb-2">
+            <input
+              type="number"
+              placeholder="Size Value"
+              value={variant.sizeValue}
+              onChange={(e) => handleVariantChange(i, "sizeValue", e.target.value)}
+              className="p-2 border"
+            />
+            <select
+              value={variant.sizeUnit}
+              onChange={(e) => handleVariantChange(i, "sizeUnit", e.target.value)}
+              className="p-2 border"
+            >
+              <option value="ml">ml</option>
+              <option value="li">li</option>
+              <option value="g">g</option>
+            </select>
+            <input
+              type="number"
+              placeholder="Price"
+              value={variant.price}
+              onChange={(e) => handleVariantChange(i, "price", e.target.value)}
+              className="p-2 border"
+            />
+            <input
+              type="number"
+              placeholder="Discount %"
+              value={variant.discountPercent}
+              onChange={(e) => handleVariantChange(i, "discountPercent", e.target.value)}
+              className="p-2 border"
+            />
             <input
               type="text"
-              placeholder="Add new type"
-              value={newProductTypeInput}
-              onChange={(e) => setNewProductTypeInput(e.target.value)}
-              className="p-2 border rounded flex-1"
-              onKeyPress={(e) => e.key === "Enter" && handleAddProductType()}
+              value={variant.finalPrice}
+              placeholder="Final Price"
+              readOnly
+              className="p-2 border bg-gray-100"
             />
-            <button onClick={handleAddProductType} className="bg-purple-600 text-white px-4 py-2 rounded">
-              Add Type
-            </button>
-          </div>
-        </div>
-        {/* Keywords Section */}
-        <div className="flex-1">
-          <label className="block mb-2 font-semibold">Search Keywords</label>
-          <div className="flex gap-2 mb-2">
             <input
-              type="text"
-              placeholder="Add keywords (e.g., masala, spice, turmeric)"
-              value={keywords}
-              onChange={handleKeywordsChange}
-              className="p-2 border flex-1 rounded"
-              onKeyPress={(e) => e.key === "Enter" && addKeyword()}
+              type="number"
+              placeholder="Stock"
+              value={variant.stock}
+              onChange={(e) => handleVariantChange(i, "stock", e.target.value)}
+              className="p-2 border"
             />
-            <button onClick={addKeyword} className="bg-green-500 text-white px-4 py-2 rounded">
-              Add
-            </button>
+            {variants.length > 1 && (
+              <button onClick={() => removeVariant(i)} className="text-red-500">
+                Remove
+              </button>
+            )}
           </div>
-          {keywordsList.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {keywordsList.map((keyword, index) => (
-                <span
-                  key={index}
-                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
-                >
-                  {keyword}
-                  <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <p className="text-sm text-gray-600 mt-2">
-            💡 <strong>Examples:</strong> turmeric, haldi, masala, spice, powder, yellow, cooking
-          </p>
-        </div>
-      </div>
-
-      <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
-      {detailsList.map((item, index) => (
-        <div key={index} className="grid grid-cols-3 gap-2 mb-2">
-          <input
-            type="text"
-            placeholder="Label (e.g., Brand)"
-            value={item.key}
-            onChange={(e) => handleDetailChange(index, "key", e.target.value)}
-            className="p-2 border"
-          />
-          <input
-            type="text"
-            placeholder="Value (e.g., Mirakle)"
-            value={item.value}
-            onChange={(e) => handleDetailChange(index, "value", e.target.value)}
-            className="p-2 border"
-          />
-          {detailsList.length > 1 && (
-            <button onClick={() => removeDetailField(index)} className="text-red-500">
-              Remove
-            </button>
-          )}
-        </div>
-      ))}
-      <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">
-        + Add Detail
-      </button>
-
-      <textarea
-        rows={5}
-        placeholder="Enter product description (optional)"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        className="w-full border p-2"
-      />
-
-      <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
-
-      {images.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          {images.map((img, i) => (
-            <div key={i} className="relative">
-              <img
-                src={URL.createObjectURL(img) || "/placeholder.svg"}
-                alt={`New image ${i}`}
-                className="w-full h-24 object-cover rounded"
-              />
-              <button
-                onClick={() => removeNewImage(i)}
-                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
-              >
-                X
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {existingImages.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          {existingImages.map((img, i) => (
-            <div key={i} className="relative">
-              <img
-                src={img.url || "/placeholder.svg"}
-                alt={`Existing image ${i}`}
-                className="w-full h-24 object-cover rounded"
-              />
-              <button
-                onClick={() => handleImageRemove(img.public_id)}
-                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
-              >
-                X
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <button
-        onClick={handleSubmit}
-        className={`mt-6 ${editingProduct ? "bg-orange-500" : "bg-green-600"} text-white px-4 py-2 rounded`}
-      >
-        {editingProduct ? "Update Product" : "Upload Product"}
-      </button>
-
-      {editingProduct && (
-        <button onClick={resetForm} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
-          Cancel
+        ))}
+        <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
+          + Add Variant
         </button>
-      )}
 
-      <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
-      <input
-        type="text"
-        placeholder="Search..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="p-2 border w-full mb-4"
-      />
-
-      <div className="grid md:grid-cols-3 gap-4">
-        {products
-          .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map((product) => (
-            <div key={product._id} className="border p-4 rounded shadow">
-              <img
-                src={
-                  product?.images?.others?.[0]?.url
-                    ? product.images.others[0].url
-                    : "/placeholder.svg?height=150&width=150"
-                }
-                alt={product.title}
-                className="w-full h-40 object-cover mb-2 rounded"
-              />
-              <h3 className="text-lg font-bold">{product.title}</h3>
-              {product.productType && (
-                <p className="text-sm text-gray-700 mb-1">
-                  <span className="font-semibold">Type:</span> {product.productType}
-                </p>
-              )}
-              {product.keywords && product.keywords.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs text-gray-600 mb-1">Keywords:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {product.keywords.slice(0, 5).map((keyword, i) => (
-                      <span key={i} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                        {keyword}
-                      </span>
-                    ))}
-                    {product.keywords.length > 5 && (
-                      <span className="text-xs text-gray-500">+{product.keywords.length - 5} more</span>
-                    )}
-                  </div>
-                </div>
-              )}
-              {product.variants?.map((v, i) => (
-                <p key={i} className="text-sm">
-                  {v.size} - ₹{v.price} ({v.discountPercent || 0}% off)
-                </p>
+        <div className="flex flex-wrap gap-8 mt-6">
+          {/* Product Type Section */}
+          <div className="flex flex-col">
+            <label className="block mb-2 font-semibold">Product Type</label>
+            <select
+              value={productType}
+              onChange={(e) => setProductType(e.target.value)}
+              className="p-2 border w-[180px] rounded"
+            >
+              <option value="">Select Type</option>
+              {availableProductTypes.map((typeOption, index) => (
+                <option key={index} value={typeOption}>
+                  {typeOption}
+                </option>
               ))}
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => handleEdit(product)} className="bg-yellow-500 text-white px-3 py-1 rounded">
-                  Edit
-                </button>
-                <button onClick={() => handleDelete(product._id)} className="bg-red-500 text-white px-3 py-1 rounded">
-                  Delete
-                </button>
+            </select>
+            <div className="mt-4 flex gap-2">
+              <input
+                type="text"
+                placeholder="Add new type"
+                value={newProductTypeInput}
+                onChange={(e) => setNewProductTypeInput(e.target.value)}
+                className="p-2 border rounded flex-1"
+                onKeyPress={(e) => e.key === "Enter" && handleAddProductType()}
+              />
+              <button onClick={handleAddProductType} className="bg-purple-600 text-white px-4 py-2 rounded">
+                Add Type
+              </button>
+            </div>
+          </div>
+          {/* Keywords Section */}
+          <div className="flex-1">
+            <label className="block mb-2 font-semibold">Search Keywords</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                placeholder="Add keywords (e.g., masala, spice, turmeric)"
+                value={keywords}
+                onChange={handleKeywordsChange}
+                className="p-2 border flex-1 rounded"
+                onKeyPress={(e) => e.key === "Enter" && addKeyword()}
+              />
+              <button onClick={addKeyword} className="bg-green-500 text-white px-4 py-2 rounded">
+                Add
+              </button>
+            </div>
+            {keywordsList.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {keywordsList.map((keyword, index) => (
+                  <span
+                    key={index}
+                    className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                  >
+                    {keyword}
+                    <button onClick={() => removeKeyword(index)} className="text-red-500 hover:text-red-700 font-bold">
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-sm text-gray-600 mt-2">
+              💡 <strong>Examples:</strong> turmeric, haldi, masala, spice, powder, yellow, cooking
+            </p>
+          </div>
+        </div>
+
+        <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
+        {detailsList.map((item, index) => (
+          <div key={index} className="grid grid-cols-3 gap-2 mb-2">
+            <input
+              type="text"
+              placeholder="Label (e.g., Brand)"
+              value={item.key}
+              onChange={(e) => handleDetailChange(index, "key", e.target.value)}
+              className="p-2 border"
+            />
+            <input
+              type="text"
+              placeholder="Value (e.g., Mirakle)"
+              value={item.value}
+              onChange={(e) => handleDetailChange(index, "value", e.target.value)}
+              className="p-2 border"
+            />
+            {detailsList.length > 1 && (
+              <button onClick={() => removeDetailField(index)} className="text-red-500">
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+        <button onClick={addDetailField} className="bg-blue-500 text-white px-3 py-1 rounded mb-4">
+          + Add Detail
+        </button>
+
+        <textarea
+          rows={5}
+          placeholder="Enter product description (optional)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full border p-2"
+        />
+
+        <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
+
+        {images.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mt-4">
+            {images.map((img, i) => (
+              <div key={i} className="relative">
+                <img
+                  src={URL.createObjectURL(img) || "/placeholder.svg"}
+                  alt={`New image ${i}`}
+                  className="w-full h-24 object-cover rounded"
+                />
                 <button
-                  onClick={() => toggleStock(product._id, product.isOutOfStock)}
-                  className="bg-blue-500 text-white px-3 py-1 rounded"
+                  onClick={() => removeNewImage(i)}
+                  className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
                 >
-                  {product.isOutOfStock ? "Set In Stock" : "Set Out of Stock"}
+                  X
                 </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+
+        {existingImages.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mt-4">
+            {existingImages.map((img, i) => (
+              <div key={i} className="relative">
+                <img
+                  src={img.url || "/placeholder.svg"}
+                  alt={`Existing image ${i}`}
+                  className="w-full h-24 object-cover rounded"
+                />
+                <button
+                  onClick={() => handleImageRemove(img.public_id)}
+                  className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1"
+                >
+                  X
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          className={`mt-6 ${editingProduct ? "bg-orange-500" : "bg-green-600"} text-white px-4 py-2 rounded`}
+        >
+          {editingProduct ? "Update Product" : "Upload Product"}
+        </button>
+
+        {editingProduct && (
+          <button onClick={resetForm} className="ml-4 bg-gray-500 text-white px-4 py-2 rounded">
+            Cancel
+          </button>
+        )}
+
+        <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="p-2 border w-full mb-4"
+        />
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {products
+            .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map((product) => (
+              <div key={product._id} className="border p-4 rounded shadow">
+                <img
+                  src={
+                    product?.images?.others?.[0]?.url
+                      ? product.images.others[0].url
+                      : "/placeholder.svg?height=150&width=150"
+                  }
+                  alt={product.title}
+                  className="w-full h-40 object-cover mb-2 rounded"
+                />
+                <h3 className="text-lg font-bold">{product.title}</h3>
+                {product.productType && (
+                  <p className="text-sm text-gray-700 mb-1">
+                    <span className="font-semibold">Type:</span> {product.productType}
+                  </p>
+                )}
+                {product.keywords && product.keywords.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-600 mb-1">Keywords:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {product.keywords.slice(0, 5).map((keyword, i) => (
+                        <span key={i} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                          {keyword}
+                        </span>
+                      ))}
+                      {product.keywords.length > 5 && (
+                        <span className="text-xs text-gray-500">+{product.keywords.length - 5} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {product.variants?.map((v, i) => (
+                  <p key={i} className="text-sm">
+                    {v.size} - ₹{v.price} ({v.discountPercent || 0}% off)
+                  </p>
+                ))}
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => handleEdit(product)} className="bg-yellow-500 text-white px-3 py-1 rounded">
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(product._id)} className="bg-red-500 text-white px-3 py-1 rounded">
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => toggleStock(product._id, product.isOutOfStock)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded"
+                  >
+                    {product.isOutOfStock ? "Set In Stock" : "Set Out of Stock"}
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }
