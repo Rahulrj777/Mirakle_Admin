@@ -494,6 +494,7 @@ export default function AdminProductUpload() {
                 <img
                   src={URL.createObjectURL(img) || "/placeholder.svg"}
                   alt={`New image ${i}`}
+                  loading="lazy"
                   className="w-full h-24 object-cover rounded"
                 />
                 <button
@@ -514,6 +515,7 @@ export default function AdminProductUpload() {
                 <img
                   src={img.url || "/placeholder.svg"}
                   alt={`Existing image ${i}`}
+                  loading="lazy"
                   className="w-full h-24 object-cover rounded"
                 />
                 <button
@@ -561,6 +563,7 @@ export default function AdminProductUpload() {
                       : "/placeholder.svg?height=150&width=150"
                   }
                   alt={product.title}
+                  loading="lazy"
                   className="w-full h-40 object-cover mb-2 rounded"
                 />
                 <h3 className="text-lg font-bold">{product.title}</h3>

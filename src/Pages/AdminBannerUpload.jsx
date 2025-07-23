@@ -494,6 +494,7 @@ const AdminBannerUpload = () => {
                         <img
                           src={selectedProduct.images.others[0].url}
                           alt={selectedProduct.title}
+                          loading="lazy"
                           className="w-16 h-16 object-cover rounded"
                         />
                       )}
@@ -520,6 +521,7 @@ const AdminBannerUpload = () => {
                             <img
                               src={product.images.others[0].url}
                               alt={product.title}
+                              loading="lazy"
                               className="w-16 h-16 object-cover rounded"
                             />
                           )}
@@ -748,6 +750,7 @@ const AdminBannerUpload = () => {
                 <img
                   src={image ? URL.createObjectURL(image) : editingBanner.imageUrl || "/placeholder.svg"}
                   alt="Preview"
+                  loading="lazy"
                   className="mb-4 w-full h-64 object-cover rounded border"
                 />
             )}
@@ -793,6 +796,7 @@ const AdminBannerUpload = () => {
                   "/placeholder.svg"
                 }
                 alt={banner.title || banner.product?.title || banner.type}
+                loading="lazy"
                 className="w-full h-40 object-cover rounded mb-2"
               />
               {banner.discountPercent > 0 && (
