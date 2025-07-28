@@ -22,7 +22,6 @@ export default function LoginPage() {
       const res = await axios.post(`${API_BASE}/api/admin/login`, { email, password });
 
       localStorage.setItem("adminToken", res.data.token);
-      localStorage.setItem("authToken", res.data.token);
       localStorage.setItem("admin", JSON.stringify(res.data.admin));
 
       alert("Login successful!");

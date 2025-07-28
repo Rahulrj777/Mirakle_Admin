@@ -281,7 +281,6 @@ export default function AdminProductUpload() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
     try {
-      // 🔥 FIX: Use adminToken instead of authToken
       const token = localStorage.getItem("adminToken")
       await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
         headers: { Authorization: `Bearer ${token}` },

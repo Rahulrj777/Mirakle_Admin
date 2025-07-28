@@ -7,6 +7,7 @@ const AdminLayout = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("adminToken");
+    localStorage.removeItem("admin");
     localStorage.removeItem("user");
     navigate("/login");
   };
