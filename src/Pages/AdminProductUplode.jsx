@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -67,7 +65,7 @@ export default function AdminProductUpload() {
       console.log("🧪 Testing product endpoint...")
 
       // Test with the actual products endpoint
-      const response = await axios.get(`${API_BASE}/api/products/all-products`, {
+      await axios.get(`${API_BASE}/api/products/all-products`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
