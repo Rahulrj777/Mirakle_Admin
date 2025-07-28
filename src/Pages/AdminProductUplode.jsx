@@ -53,7 +53,6 @@ export default function AdminProductUpload() {
     console.log("========================")
   }
 
-  // Test the actual product endpoint instead
   // const testProductEndpoint = async () => {
   //   const token = localStorage.getItem("adminToken")
   //   if (!token) {
@@ -422,7 +421,6 @@ export default function AdminProductUpload() {
       <div className="max-w-5xl mx-auto p-6">
         <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
 
-        {/* Enhanced Debug Panel */}
         {/* <div className="mb-4 p-4 bg-gray-100 rounded border">
           <h3 className="font-bold mb-2">🔧 Debug Panel</h3>
           <div className="flex flex-wrap gap-2 mb-2">
