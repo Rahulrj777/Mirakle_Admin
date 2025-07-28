@@ -54,32 +54,32 @@ export default function AdminProductUpload() {
   }
 
   // Test the actual product endpoint instead
-  const testProductEndpoint = async () => {
-    const token = localStorage.getItem("adminToken")
-    if (!token) {
-      console.log("❌ No token found")
-      return false
-    }
+  // const testProductEndpoint = async () => {
+  //   const token = localStorage.getItem("adminToken")
+  //   if (!token) {
+  //     console.log("❌ No token found")
+  //     return false
+  //   }
 
-    try {
-      console.log("🧪 Testing product endpoint...")
+  //   try {
+  //     console.log("🧪 Testing product endpoint...")
 
-      // Test with the actual products endpoint
-      await axios.get(`${API_BASE}/api/products/all-products`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      })
+  //     // Test with the actual products endpoint
+  //     await axios.get(`${API_BASE}/api/products/all-products`, {
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //         "Content-Type": "application/json",
+  //       },
+  //     })
 
-      console.log("✅ Product endpoint test successful")
-      return true
-    } catch (error) {
-      console.error("❌ Product endpoint test failed:", error.response?.data || error.message)
-      console.error("Status:", error.response?.status)
-      return false
-    }
-  }
+  //     console.log("✅ Product endpoint test successful")
+  //     return true
+  //   } catch (error) {
+  //     console.error("❌ Product endpoint test failed:", error.response?.data || error.message)
+  //     console.error("Status:", error.response?.status)
+  //     return false
+  //   }
+  // }
 
   const fetchProducts = async () => {
     try {
