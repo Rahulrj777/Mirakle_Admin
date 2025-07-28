@@ -1,9 +1,13 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
-import AdminLayout from "../Componenets/AdminLayout";
+import AdminLayout from "../Componenets/AdminLayout"
+import { useNavigate } from "react-router-dom"
 
 export default function AdminProductUpload() {
+  const navigate = useNavigate()
   const [name, setName] = useState("")
   const [variants, setVariants] = useState([
     { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "" },
@@ -25,6 +29,32 @@ export default function AdminProductUpload() {
   useEffect(() => {
     fetchProducts()
   }, [])
+
+  // Check if token is valid
+  const checkTokenValidity = async () => {
+    const token = localStorage.getItem("adminToken")
+    if (!token) {
+      alert("Please log in again")
+      navigate("/login")
+      return false
+    }
+
+    try {
+      await axios.get(`${API_BASE}/api/products/all-products`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      return true
+    } catch (error) {
+      if (error.response?.status === 401) {
+        alert("Your session has expired. Please log in again.")
+        localStorage.removeItem("adminToken")
+        localStorage.removeItem("admin")
+        navigate("/login")
+        return false
+      }
+      return true
+    }
+  }
 
   const fetchProducts = async () => {
     try {
@@ -156,15 +186,24 @@ export default function AdminProductUpload() {
 
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
+
+    // Check token first
+    const isTokenValid = await checkTokenValidity()
+    if (!isTokenValid) {
+      return
+    }
+
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
       console.warn("❌ Validation failed", { name, variants })
       return
     }
+
     if (!productType) {
       alert("Please select a product type.")
       return
     }
+
     if (images.length === 0 && existingImages.length === 0) {
       alert("Please upload at least one image for the product.")
       return
@@ -199,6 +238,7 @@ export default function AdminProductUpload() {
     }
 
     const token = localStorage.getItem("adminToken")
+
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)
     console.log("Product Type:", productType)
@@ -214,37 +254,43 @@ export default function AdminProductUpload() {
     console.log("Admin Token:", token ? "Present" : "Missing")
     console.log("-----------------------------")
 
-    if (!token) {
-      alert("Admin authentication token is missing. Please log in as admin.")
-      return
-    }
-
     try {
       let res
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 30000,
+      }
+
       if (editingProduct) {
-        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
         alert("✅ Product updated")
         console.log("🟢 Updated:", res.data)
       } else {
-        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`,
-          },
-        })
+        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
         alert("✅ Product uploaded")
         console.log("🟢 Uploaded:", res.data)
       }
+
       resetForm()
       fetchProducts()
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Operation failed")
+
+      if (err.response?.status === 401) {
+        alert("Your session has expired. Please log in again.")
+        localStorage.removeItem("adminToken")
+        localStorage.removeItem("admin")
+        navigate("/login")
+      } else if (err.response?.status === 413) {
+        alert("File size too large. Please reduce image sizes and try again.")
+      } else if (err.response?.status === 500) {
+        alert("Server error. Please try again later.")
+      } else {
+        alert(err.response?.data?.message || "Operation failed. Please try again.")
+      }
     }
   }
 
@@ -279,6 +325,10 @@ export default function AdminProductUpload() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
+
+    const isTokenValid = await checkTokenValidity()
+    if (!isTokenValid) return
+
     try {
       const token = localStorage.getItem("adminToken")
       await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
@@ -288,13 +338,20 @@ export default function AdminProductUpload() {
       fetchProducts()
     } catch (err) {
       console.error("Delete failed:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Delete failed")
+      if (err.response?.status === 401) {
+        alert("Your session has expired. Please log in again.")
+        navigate("/login")
+      } else {
+        alert(err.response?.data?.message || "Delete failed")
+      }
     }
   }
 
   const toggleStock = async (id, currentStatus) => {
+    const isTokenValid = await checkTokenValidity()
+    if (!isTokenValid) return
+
     try {
-      // 🔥 FIX: Use adminToken instead of authToken
       const token = localStorage.getItem("adminToken")
       await axios.put(
         `${API_BASE}/api/products/toggle-stock/${id}`,
@@ -308,7 +365,12 @@ export default function AdminProductUpload() {
       fetchProducts()
     } catch (err) {
       console.error("Stock update failed:", err.response?.data || err.message)
-      alert(err.response?.data?.message || "Stock update failed")
+      if (err.response?.status === 401) {
+        alert("Your session has expired. Please log in again.")
+        navigate("/login")
+      } else {
+        alert(err.response?.data?.message || "Stock update failed")
+      }
     }
   }
 
@@ -316,6 +378,25 @@ export default function AdminProductUpload() {
     <AdminLayout>
       <div className="max-w-5xl mx-auto p-6">
         <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
+
+        {/* Debug info */}
+        <div className="mb-4 p-3 bg-gray-100 rounded">
+          <span className="text-sm text-gray-600">
+            Token Status: {localStorage.getItem("adminToken") ? "✅ Present" : "❌ Missing"}
+          </span>
+          <button
+            onClick={() => {
+              localStorage.removeItem("adminToken")
+              localStorage.removeItem("admin")
+              navigate("/login")
+            }}
+            className="ml-4 bg-red-500 text-white px-3 py-1 rounded text-sm"
+          >
+            🔄 Force Logout
+          </button>
+        </div>
+
+        {/* Product Name */}
         <input
           type="text"
           placeholder="Product Name"
@@ -323,6 +404,8 @@ export default function AdminProductUpload() {
           onChange={(e) => setName(e.target.value)}
           className="p-2 border w-full mb-4"
         />
+
+        {/* Variants */}
         {variants.map((variant, i) => (
           <div key={i} className="grid grid-cols-7 gap-2 mb-2">
             <input
@@ -376,12 +459,14 @@ export default function AdminProductUpload() {
             )}
           </div>
         ))}
+
         <button onClick={addVariant} className="bg-blue-600 text-white px-3 py-1 mt-2 rounded">
           + Add Variant
         </button>
 
+        {/* Product Type and Keywords Section */}
         <div className="flex flex-wrap gap-8 mt-6">
-          {/* Product Type Section */}
+          {/* Product Type */}
           <div className="flex flex-col">
             <label className="block mb-2 font-semibold">Product Type</label>
             <select
@@ -410,7 +495,8 @@ export default function AdminProductUpload() {
               </button>
             </div>
           </div>
-          {/* Keywords Section */}
+
+          {/* Keywords */}
           <div className="flex-1">
             <label className="block mb-2 font-semibold">Search Keywords</label>
             <div className="flex gap-2 mb-2">
@@ -447,6 +533,7 @@ export default function AdminProductUpload() {
           </div>
         </div>
 
+        {/* Product Details */}
         <h3 className="text-lg font-semibold mt-6 mb-2">Product Details</h3>
         {detailsList.map((item, index) => (
           <div key={index} className="grid grid-cols-3 gap-2 mb-2">
@@ -475,16 +562,26 @@ export default function AdminProductUpload() {
           + Add Detail
         </button>
 
+        {/* Description */}
         <textarea
           rows={5}
           placeholder="Enter product description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full border p-2"
+          className="w-full border p-2 mb-4"
         />
 
-        <input id="product-images" type="file" multiple accept="image/*" onChange={handleImageChange} className="mt-4" />
+        {/* Image Upload */}
+        <input
+          id="product-images"
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleImageChange}
+          className="mt-4"
+        />
 
+        {/* New Images Preview */}
         {images.length > 0 && (
           <div className="grid grid-cols-4 gap-2 mt-4">
             {images.map((img, i) => (
@@ -492,7 +589,6 @@ export default function AdminProductUpload() {
                 <img
                   src={URL.createObjectURL(img) || "/placeholder.svg"}
                   alt={`New image ${i}`}
-                  loading="lazy"
                   className="w-full h-24 object-cover rounded"
                 />
                 <button
@@ -506,14 +602,14 @@ export default function AdminProductUpload() {
           </div>
         )}
 
+        {/* Existing Images Preview */}
         {existingImages.length > 0 && (
           <div className="grid grid-cols-4 gap-2 mt-4">
             {existingImages.map((img, i) => (
               <div key={i} className="relative">
                 <img
-                  src={img.url || "/placeholder.svg"}
+                  src={img.url || "/placeholder.svg?height=100&width=100"}
                   alt={`Existing image ${i}`}
-                  loading="lazy"
                   className="w-full h-24 object-cover rounded"
                 />
                 <button
@@ -527,6 +623,7 @@ export default function AdminProductUpload() {
           </div>
         )}
 
+        {/* Submit Buttons */}
         <button
           onClick={handleSubmit}
           className={`mt-6 ${editingProduct ? "bg-orange-500" : "bg-green-600"} text-white px-4 py-2 rounded`}
@@ -540,6 +637,7 @@ export default function AdminProductUpload() {
           </button>
         )}
 
+        {/* Products List */}
         <h2 className="text-xl font-semibold mt-10 mb-4">All Products</h2>
         <input
           type="text"
@@ -561,7 +659,6 @@ export default function AdminProductUpload() {
                       : "/placeholder.svg?height=150&width=150"
                   }
                   alt={product.title}
-                  loading="lazy"
                   className="w-full h-40 object-cover mb-2 rounded"
                 />
                 <h3 className="text-lg font-bold">{product.title}</h3>
