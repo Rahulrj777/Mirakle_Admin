@@ -55,8 +55,8 @@ export default function AdminProductUpload() {
     console.log("========================")
   }
 
-  // Test token with server
-  const testTokenWithServer = async () => {
+  // Test the actual product endpoint instead
+  const testProductEndpoint = async () => {
     const token = localStorage.getItem("adminToken")
     if (!token) {
       console.log("❌ No token found")
@@ -64,22 +64,21 @@ export default function AdminProductUpload() {
     }
 
     try {
-      console.log("🧪 Testing token with server...")
+      console.log("🧪 Testing product endpoint...")
 
-      // Test with a simple endpoint first
-      const response = await axios.get(`${API_BASE}/api/admin/validate-token`, {
+      // Test with the actual products endpoint
+      const response = await axios.get(`${API_BASE}/api/products/all-products`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       })
 
-      console.log("✅ Token validation successful:", response.data)
+      console.log("✅ Product endpoint test successful")
       return true
     } catch (error) {
-      console.error("❌ Token validation failed:", error.response?.data || error.message)
+      console.error("❌ Product endpoint test failed:", error.response?.data || error.message)
       console.error("Status:", error.response?.status)
-      console.error("Headers sent:", error.config?.headers)
       return false
     }
   }
@@ -215,16 +214,11 @@ export default function AdminProductUpload() {
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
 
-    // Debug token before making request
+    // Debug token
     debugToken()
 
-    // Test token with server first
-    const isTokenValid = await testTokenWithServer()
-    if (!isTokenValid) {
-      alert("Token validation failed. Please log in again.")
-      navigate("/login")
-      return
-    }
+    // Skip token validation for now and go straight to the request
+    console.log("⚠️ Skipping token validation, proceeding with request...")
 
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
@@ -286,6 +280,8 @@ export default function AdminProductUpload() {
     }
     console.log("Admin Token:", token ? "Present" : "Missing")
     console.log("Request URL:", `${API_BASE}/api/products/update/${editingProduct._id}`)
+    console.log("Environment Variables Check:")
+    console.log("- API_BASE:", API_BASE)
     console.log("-----------------------------")
 
     try {
@@ -323,6 +319,16 @@ export default function AdminProductUpload() {
       console.error("❌ Error status:", err.response?.status)
       console.error("❌ Error headers:", err.response?.headers)
       console.error("❌ Request config:", err.config)
+      console.error("❌ Full error object:", err)
+
+      // Let's see what the server is actually returning
+      if (err.response) {
+        console.log("🔍 Server response details:")
+        console.log("- Status:", err.response.status)
+        console.log("- Status Text:", err.response.statusText)
+        console.log("- Data:", err.response.data)
+        console.log("- Headers:", err.response.headers)
+      }
 
       if (err.response?.status === 401) {
         alert("Your session has expired. Please log in again.")
@@ -371,12 +377,6 @@ export default function AdminProductUpload() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
 
-    const isTokenValid = await testTokenWithServer()
-    if (!isTokenValid) {
-      navigate("/login")
-      return
-    }
-
     try {
       const token = localStorage.getItem("adminToken")
       await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
@@ -396,12 +396,6 @@ export default function AdminProductUpload() {
   }
 
   const toggleStock = async (id, currentStatus) => {
-    const isTokenValid = await testTokenWithServer()
-    if (!isTokenValid) {
-      navigate("/login")
-      return
-    }
-
     try {
       const token = localStorage.getItem("adminToken")
       await axios.put(
@@ -437,8 +431,8 @@ export default function AdminProductUpload() {
             <button onClick={debugToken} className="bg-blue-500 text-white px-3 py-1 rounded text-sm">
               🔍 Debug Token
             </button>
-            <button onClick={testTokenWithServer} className="bg-green-500 text-white px-3 py-1 rounded text-sm">
-              🧪 Test Token
+            <button onClick={testProductEndpoint} className="bg-green-500 text-white px-3 py-1 rounded text-sm">
+              🧪 Test Products API
             </button>
             <button
               onClick={() => {
@@ -588,9 +582,6 @@ export default function AdminProductUpload() {
                 ))}
               </div>
             )}
-            <p className="text-sm text-gray-600 mt-2">
-              💡 <strong>Examples:</strong> turmeric, haldi, masala, spice, powder, yellow, cooking
-            </p>
           </div>
         </div>
 
@@ -623,7 +614,6 @@ export default function AdminProductUpload() {
           + Add Detail
         </button>
 
-        {/* Description */}
         <textarea
           rows={5}
           placeholder="Enter product description (optional)"
@@ -632,7 +622,6 @@ export default function AdminProductUpload() {
           className="w-full border p-2 mb-4"
         />
 
-        {/* Image Upload */}
         <input
           id="product-images"
           type="file"
