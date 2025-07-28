@@ -198,7 +198,6 @@ export default function AdminProductUpload() {
       formData.append("removedImages", JSON.stringify(removedImages))
     }
 
-    // 🔥 FIX: Use adminToken instead of authToken
     const token = localStorage.getItem("adminToken")
     console.log("--- Submitting Product Data ---")
     console.log("Name:", name)

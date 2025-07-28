@@ -8,33 +8,15 @@ import AuthGuard from "../Componenets/AuthGuard"
 const Routing = () => {
   return (
     <Routes>
-      {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
-
-      <Route
-        path="/admin/banners"
-        element={
-          <AuthGuard>
-            <AdminBannerUpload />
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/admin/products"
-        element={
-          <AuthGuard>
-            <AdminProductUpload />
-          </AuthGuard>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          localStorage.getItem("authToken")
-            ? <Navigate to="/admin/banners" replace />
-            : <Navigate to="/login" replace />
-        }
+      
+      <Route path="/admin/banners" element={<AuthGuard><AdminBannerUpload /></AuthGuard>} />
+      <Route path="/admin/products" element={<AuthGuard><AdminProductUpload /></AuthGuard>} />
+      
+      <Route path="/" element={localStorage.getItem("authToken")
+        ? <Navigate to="/admin/banners" replace />
+        : <Navigate to="/login" replace />}
       />
     </Routes>
   )
