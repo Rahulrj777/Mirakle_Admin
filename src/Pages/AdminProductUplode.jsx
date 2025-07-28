@@ -423,7 +423,7 @@ export default function AdminProductUpload() {
         <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
 
         {/* Enhanced Debug Panel */}
-        <div className="mb-4 p-4 bg-gray-100 rounded border">
+        {/* <div className="mb-4 p-4 bg-gray-100 rounded border">
           <h3 className="font-bold mb-2">🔧 Debug Panel</h3>
           <div className="flex flex-wrap gap-2 mb-2">
             <button onClick={debugToken} className="bg-blue-500 text-white px-3 py-1 rounded text-sm">
@@ -447,7 +447,7 @@ export default function AdminProductUpload() {
             <p>Token Status: {localStorage.getItem("adminToken") ? "✅ Present" : "❌ Missing"}</p>
             <p>API Base: {API_BASE}</p>
           </div>
-        </div>
+        </div> */}
 
         {/* Product Name */}
         <input
