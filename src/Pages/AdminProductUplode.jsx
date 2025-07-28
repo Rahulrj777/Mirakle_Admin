@@ -30,29 +30,57 @@ export default function AdminProductUpload() {
     fetchProducts()
   }, [])
 
-  // Check if token is valid
-  const checkTokenValidity = async () => {
+  // Enhanced token debugging
+  const debugToken = () => {
+    const token = localStorage.getItem("adminToken")
+    console.log("=== TOKEN DEBUG INFO ===")
+    console.log("Token exists:", !!token)
+    console.log("Token length:", token?.length)
+    console.log("Token first 50 chars:", token?.substring(0, 50))
+    console.log("Token last 20 chars:", token?.substring(token.length - 20))
+
+    if (token) {
+      try {
+        // Decode JWT payload (without verification)
+        const payload = JSON.parse(atob(token.split(".")[1]))
+        console.log("Token payload:", payload)
+        console.log("Token expires at:", new Date(payload.exp * 1000))
+        console.log("Token issued at:", new Date(payload.iat * 1000))
+        console.log("Current time:", new Date())
+        console.log("Token expired?", Date.now() > payload.exp * 1000)
+      } catch (e) {
+        console.error("Failed to decode token:", e)
+      }
+    }
+    console.log("========================")
+  }
+
+  // Test token with server
+  const testTokenWithServer = async () => {
     const token = localStorage.getItem("adminToken")
     if (!token) {
-      alert("Please log in again")
-      navigate("/login")
+      console.log("❌ No token found")
       return false
     }
 
     try {
-      await axios.get(`${API_BASE}/api/products/all-products`, {
-        headers: { Authorization: `Bearer ${token}` },
+      console.log("🧪 Testing token with server...")
+
+      // Test with a simple endpoint first
+      const response = await axios.get(`${API_BASE}/api/admin/validate-token`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
+
+      console.log("✅ Token validation successful:", response.data)
       return true
     } catch (error) {
-      if (error.response?.status === 401) {
-        alert("Your session has expired. Please log in again.")
-        localStorage.removeItem("adminToken")
-        localStorage.removeItem("admin")
-        navigate("/login")
-        return false
-      }
-      return true
+      console.error("❌ Token validation failed:", error.response?.data || error.message)
+      console.error("Status:", error.response?.status)
+      console.error("Headers sent:", error.config?.headers)
+      return false
     }
   }
 
@@ -187,9 +215,14 @@ export default function AdminProductUpload() {
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
 
-    // Check token first
-    const isTokenValid = await checkTokenValidity()
+    // Debug token before making request
+    debugToken()
+
+    // Test token with server first
+    const isTokenValid = await testTokenWithServer()
     if (!isTokenValid) {
+      alert("Token validation failed. Please log in again.")
+      navigate("/login")
       return
     }
 
@@ -252,6 +285,7 @@ export default function AdminProductUpload() {
       console.log("Editing Product ID:", editingProduct._id)
     }
     console.log("Admin Token:", token ? "Present" : "Missing")
+    console.log("Request URL:", `${API_BASE}/api/products/update/${editingProduct._id}`)
     console.log("-----------------------------")
 
     try {
@@ -263,6 +297,14 @@ export default function AdminProductUpload() {
         },
         timeout: 30000,
       }
+
+      console.log("🚀 Making request with config:", {
+        url: editingProduct
+          ? `${API_BASE}/api/products/update/${editingProduct._id}`
+          : `${API_BASE}/api/products/upload-product`,
+        method: editingProduct ? "PUT" : "POST",
+        headers: config.headers,
+      })
 
       if (editingProduct) {
         res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
@@ -278,6 +320,9 @@ export default function AdminProductUpload() {
       fetchProducts()
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
+      console.error("❌ Error status:", err.response?.status)
+      console.error("❌ Error headers:", err.response?.headers)
+      console.error("❌ Request config:", err.config)
 
       if (err.response?.status === 401) {
         alert("Your session has expired. Please log in again.")
@@ -326,8 +371,11 @@ export default function AdminProductUpload() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
 
-    const isTokenValid = await checkTokenValidity()
-    if (!isTokenValid) return
+    const isTokenValid = await testTokenWithServer()
+    if (!isTokenValid) {
+      navigate("/login")
+      return
+    }
 
     try {
       const token = localStorage.getItem("adminToken")
@@ -348,8 +396,11 @@ export default function AdminProductUpload() {
   }
 
   const toggleStock = async (id, currentStatus) => {
-    const isTokenValid = await checkTokenValidity()
-    if (!isTokenValid) return
+    const isTokenValid = await testTokenWithServer()
+    if (!isTokenValid) {
+      navigate("/login")
+      return
+    }
 
     try {
       const token = localStorage.getItem("adminToken")
@@ -379,21 +430,31 @@ export default function AdminProductUpload() {
       <div className="max-w-5xl mx-auto p-6">
         <h2 className="text-2xl font-bold mb-4">{editingProduct ? "Edit Product" : "Upload Product"}</h2>
 
-        {/* Debug info */}
-        <div className="mb-4 p-3 bg-gray-100 rounded">
-          <span className="text-sm text-gray-600">
-            Token Status: {localStorage.getItem("adminToken") ? "✅ Present" : "❌ Missing"}
-          </span>
-          <button
-            onClick={() => {
-              localStorage.removeItem("adminToken")
-              localStorage.removeItem("admin")
-              navigate("/login")
-            }}
-            className="ml-4 bg-red-500 text-white px-3 py-1 rounded text-sm"
-          >
-            🔄 Force Logout
-          </button>
+        {/* Enhanced Debug Panel */}
+        <div className="mb-4 p-4 bg-gray-100 rounded border">
+          <h3 className="font-bold mb-2">🔧 Debug Panel</h3>
+          <div className="flex flex-wrap gap-2 mb-2">
+            <button onClick={debugToken} className="bg-blue-500 text-white px-3 py-1 rounded text-sm">
+              🔍 Debug Token
+            </button>
+            <button onClick={testTokenWithServer} className="bg-green-500 text-white px-3 py-1 rounded text-sm">
+              🧪 Test Token
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem("adminToken")
+                localStorage.removeItem("admin")
+                navigate("/login")
+              }}
+              className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+            >
+              🔄 Force Logout
+            </button>
+          </div>
+          <div className="text-sm text-gray-600">
+            <p>Token Status: {localStorage.getItem("adminToken") ? "✅ Present" : "❌ Missing"}</p>
+            <p>API Base: {API_BASE}</p>
+          </div>
         </div>
 
         {/* Product Name */}
