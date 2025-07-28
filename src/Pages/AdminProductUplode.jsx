@@ -572,21 +572,6 @@ export default function AdminProductUpload() {
                     <span className="font-semibold">Type:</span> {product.productType}
                   </p>
                 )}
-                {product.keywords && product.keywords.length > 0 && (
-                  <div className="mb-2">
-                    <p className="text-xs text-gray-600 mb-1">Keywords:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {product.keywords.slice(0, 5).map((keyword, i) => (
-                        <span key={i} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
-                          {keyword}
-                        </span>
-                      ))}
-                      {product.keywords.length > 5 && (
-                        <span className="text-xs text-gray-500">+{product.keywords.length - 5} more</span>
-                      )}
-                    </div>
-                  </div>
-                )}
                 {product.variants?.map((v, i) => (
                   <p key={i} className="text-sm">
                     {v.size} - ₹{v.price} ({v.discountPercent || 0}% off)
