@@ -23,6 +23,7 @@ export default function AdminProductUpload() {
   const [productType, setProductType] = useState("")
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
+  const [loadingMap, setLoadingMap] = useState({});
 
   useEffect(() => {
     fetchProducts()
@@ -350,37 +351,28 @@ export default function AdminProductUpload() {
     }
   }
 
-  // Updated function to toggle individual variant stock
   const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
+    const key = `variant-${productId}-${variantIndex}`;
+    if (loadingMap[key]) return; // prevent duplicate requests
+
+    setLoadingMap((prev) => ({ ...prev, [key]: true }));
+
     try {
-      const token = localStorage.getItem("adminToken")
-      console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
-
+      const token = localStorage.getItem("adminToken");
       await axios.put(
-        `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
-        {
-          variantIndex: variantIndex,
-          isOutOfStock: !currentStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
-
-      console.log("✅ Variant stock toggled successfully")
-      fetchProducts()
+        `${API_BASE}/products/toggle/variant-stock/${productId}`,
+        { variantIndex, isOutOfStock: !currentStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Variant stock updated!");
+      fetchProducts(); // refresh product list
     } catch (err) {
-      console.error("❌ Variant stock update failed:", err.response?.data || err.message)
-      if (err.response?.status === 401) {
-        alert("Your session has expired. Please log in again.")
-        navigate("/login")
-      } else if (err.response?.status === 404) {
-        alert("API endpoint not found. Please check if the backend route exists.")
-      } else {
-        alert(err.response?.data?.message || "Variant stock update failed")
-      }
+      alert("Failed to update variant stock.");
+      console.error(err);
+    } finally {
+      setLoadingMap((prev) => ({ ...prev, [key]: false }));
     }
-  }
+  };
 
   return (
     <AdminLayout>
@@ -837,7 +829,8 @@ export default function AdminProductUpload() {
                             </span>
                           </div>
                           <button
-                            onClick={() => toggleVariantStock(product._id, i, v.isOutOfStock)}
+                            disabled={loadingMap[`variant-${product._id}-${i}`]}
+                            onClick={() => toggleVariantStock(product._id, i, variant.isOutOfStock)}
                             className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
                               v.isOutOfStock
                                 ? "bg-green-600 text-white hover:bg-green-700"
