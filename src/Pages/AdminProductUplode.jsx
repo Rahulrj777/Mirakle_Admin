@@ -356,6 +356,13 @@ export default function AdminProductUpload() {
       const token = localStorage.getItem("adminToken")
       console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
 
+      // Make sure currentStatus is defined
+      if (currentStatus === undefined || currentStatus === null) {
+        console.error("❌ Current status is undefined")
+        alert("Error: Cannot determine current stock status")
+        return
+      }
+
       await axios.put(
         `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
         {
