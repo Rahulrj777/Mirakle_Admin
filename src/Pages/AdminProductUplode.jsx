@@ -350,18 +350,20 @@ export default function AdminProductUpload() {
     }
   }
 
-  // Updated function to toggle individual variant stock
-  const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
+  // Updated function to toggle individual variant stock - FIXED
+  const toggleVariantStock = async (productId, variantIndex, variant) => {
     try {
       const token = localStorage.getItem("adminToken")
-      console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
 
-      // Make sure currentStatus is defined
-      if (currentStatus === undefined || currentStatus === null) {
-        console.error("❌ Current status is undefined")
-        alert("Error: Cannot determine current stock status")
-        return
-      }
+      // Get the current status from the variant object, default to false if undefined
+      const currentStatus = variant?.isOutOfStock ?? false
+
+      console.log("🔄 Toggling variant stock:", {
+        productId,
+        variantIndex,
+        currentStatus,
+        variant: variant,
+      })
 
       await axios.put(
         `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
@@ -837,21 +839,21 @@ export default function AdminProductUpload() {
                             </div>
                             <span
                               className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
-                                v.isOutOfStock ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
+                                (v.isOutOfStock ?? false) ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
                               }`}
                             >
-                              {v.isOutOfStock ? "Out of Stock" : "In Stock"}
+                              {(v.isOutOfStock ?? false) ? "Out of Stock" : "In Stock"}
                             </span>
                           </div>
                           <button
-                            onClick={() => toggleVariantStock(product._id, i, v.isOutOfStock)}
+                            onClick={() => toggleVariantStock(product._id, i, v)}
                             className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
-                              v.isOutOfStock
+                              (v.isOutOfStock ?? false)
                                 ? "bg-green-600 text-white hover:bg-green-700"
                                 : "bg-red-600 text-white hover:bg-red-700"
                             }`}
                           >
-                            {v.isOutOfStock ? "Set In Stock" : "Set Out of Stock"}
+                            {(v.isOutOfStock ?? false) ? "Set In Stock" : "Set Out of Stock"}
                           </button>
                         </div>
                       ))}
