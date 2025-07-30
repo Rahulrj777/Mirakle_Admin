@@ -19,9 +19,6 @@ export default function AdminProductUpload() {
       images: [],
     },
   ])
-  const [images, setImages] = useState([])
-  const [existingImages, setExistingImages] = useState([])
-  const [removedImages, setRemovedImages] = useState([])
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -75,12 +72,6 @@ export default function AdminProductUpload() {
     })
   }
 
-  const handleImageChange = (e) => {
-    if (e.target.files) {
-      setImages([...images, ...Array.from(e.target.files)])
-    }
-  }
-
   const handleVariantImageChange = (variantIndex, e) => {
     if (e.target.files) {
       const newVariantImages = Array.from(e.target.files)
@@ -98,17 +89,6 @@ export default function AdminProductUpload() {
       updated[variantIndex].images.splice(imageIndex, 1)
       return updated
     })
-  }
-
-  const handleImageRemove = (publicId) => {
-    setRemovedImages((prev) => [...prev, publicId])
-    setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
-  }
-
-  const removeNewImage = (index) => {
-    const copy = [...images]
-    copy.splice(index, 1)
-    setImages(copy)
   }
 
   const handleVariantChange = (index, field, value) => {
@@ -245,27 +225,22 @@ export default function AdminProductUpload() {
       }
     })
 
-    if (removedImages.length > 0) {
-      formData.append("removedImages", JSON.stringify(removedImages))
-    }
-
     const token = localStorage.getItem("adminToken")
 
     try {
-      let res
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
-        timeout: 60000, // Increased timeout for multiple images
+        timeout: 60000,
       }
 
       if (editingProduct) {
-        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
+        await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
         alert("✅ Product updated")
       } else {
-        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
+        await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
         alert("✅ Product uploaded")
       }
 
@@ -798,9 +773,10 @@ export default function AdminProductUpload() {
                   >
                     <img
                       src={
-                        product?.images?.others?.[0]?.url
-                          ? product.images.others[0].url
-                          : "/placeholder.svg?height=200&width=200"
+                        product?.variants?.[0]?.images?.[0]?.url ||
+                        product?.images?.others?.[0]?.url ||
+                        "/placeholder.svg?height=200&width=200" ||
+                        "/placeholder.svg"
                       }
                       alt={product.title}
                       className="w-full h-48 object-cover mb-4 rounded-xl"
