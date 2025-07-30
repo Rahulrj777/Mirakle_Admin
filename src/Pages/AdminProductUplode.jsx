@@ -350,36 +350,37 @@ export default function AdminProductUpload() {
     }
   }
 
-  // const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
-  //   try {
-  //     const token = localStorage.getItem("adminToken")
-  //     console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
+  // Updated function to toggle individual variant stock
+  const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
+    try {
+      const token = localStorage.getItem("adminToken")
+      console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
 
-  //     await axios.put(
-  //       `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
-  //       {
-  //         variantIndex: variantIndex,
-  //         isOutOfStock: !currentStatus,
-  //       },
-  //       {
-  //         headers: { Authorization: `Bearer ${token}` },
-  //       },
-  //     )
+      await axios.put(
+        `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
+        {
+          variantIndex: variantIndex,
+          isOutOfStock: !currentStatus,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
 
-  //     console.log("✅ Variant stock toggled successfully")
-  //     fetchProducts()
-  //   } catch (err) {
-  //     console.error("❌ Variant stock update failed:", err.response?.data || err.message)
-  //     if (err.response?.status === 401) {
-  //       alert("Your session has expired. Please log in again.")
-  //       navigate("/login")
-  //     } else if (err.response?.status === 404) {
-  //       alert("API endpoint not found. Please check if the backend route exists.")
-  //     } else {
-  //       alert(err.response?.data?.message || "Variant stock update failed")
-  //     }
-  //   }
-  // }
+      console.log("✅ Variant stock toggled successfully")
+      fetchProducts()
+    } catch (err) {
+      console.error("❌ Variant stock update failed:", err.response?.data || err.message)
+      if (err.response?.status === 401) {
+        alert("Your session has expired. Please log in again.")
+        navigate("/login")
+      } else if (err.response?.status === 404) {
+        alert("API endpoint not found. Please check if the backend route exists.")
+      } else {
+        alert(err.response?.data?.message || "Variant stock update failed")
+      }
+    }
+  }
 
   return (
     <AdminLayout>
@@ -836,7 +837,7 @@ export default function AdminProductUpload() {
                             </span>
                           </div>
                           <button
-                            onClick={() => toggleStock(product._id, i, v.isOutOfStock)}
+                            onClick={() => toggleVariantStock(product._id, i, v.isOutOfStock)}
                             className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
                               v.isOutOfStock
                                 ? "bg-green-600 text-white hover:bg-green-700"
@@ -863,12 +864,12 @@ export default function AdminProductUpload() {
                       >
                         Delete
                       </button>
-                      {/* <button
+                      <button
                         onClick={() => toggleStock(product._id, product.isOutOfStock)}
                         className="w-full bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium"
                       >
                         {product.isOutOfStock ? "Set Product In Stock" : "Set Product Out of Stock"}
-                      </button> */}
+                      </button>
                     </div>
                   </div>
                 ))}
