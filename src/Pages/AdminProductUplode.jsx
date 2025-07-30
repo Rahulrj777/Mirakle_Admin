@@ -327,30 +327,6 @@ export default function AdminProductUpload() {
     }
   }
 
-  const toggleStock = async (id, currentStatus) => {
-    try {
-      const token = localStorage.getItem("adminToken")
-      await axios.put(
-        `${API_BASE}/api/products/toggle-stock/${id}`,
-        {
-          isOutOfStock: !currentStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
-      fetchProducts()
-    } catch (err) {
-      console.error("Stock update failed:", err.response?.data || err.message)
-      if (err.response?.status === 401) {
-        alert("Your session has expired. Please log in again.")
-        navigate("/login")
-      } else {
-        alert(err.response?.data?.message || "Stock update failed")
-      }
-    }
-  }
-
   const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
     const key = `variant-${productId}-${variantIndex}`;
     if (loadingMap[key]) return; // prevent duplicate requests
@@ -856,12 +832,6 @@ export default function AdminProductUpload() {
                         className="w-full bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-colors font-medium"
                       >
                         Delete
-                      </button>
-                      <button
-                        onClick={() => toggleStock(product._id, product.isOutOfStock)}
-                        className="w-full bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium"
-                      >
-                        {product.isOutOfStock ? "In Stock" : "Out of Stock"}
                       </button>
                     </div>
                   </div>
