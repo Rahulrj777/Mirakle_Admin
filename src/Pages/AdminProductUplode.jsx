@@ -8,7 +8,16 @@ export default function AdminProductUpload() {
   const navigate = useNavigate()
   const [name, setName] = useState("")
   const [variants, setVariants] = useState([
-    { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "", isOutOfStock: false },
+    {
+      sizeValue: "",
+      sizeUnit: "ml",
+      price: "",
+      discountPercent: "",
+      finalPrice: "",
+      stock: "",
+      isOutOfStock: false,
+      images: [],
+    },
   ])
   const [images, setImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
@@ -28,28 +37,6 @@ export default function AdminProductUpload() {
     fetchProducts()
   }, [])
 
-  const debugToken = () => {
-    const token = localStorage.getItem("adminToken")
-    console.log("=== TOKEN DEBUG INFO ===")
-    console.log("Token exists:", !!token)
-    console.log("Token length:", token?.length)
-    console.log("Token first 50 chars:", token?.substring(0, 50))
-    console.log("Token last 20 chars:", token?.substring(token.length - 20))
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]))
-        console.log("Token payload:", payload)
-        console.log("Token expires at:", new Date(payload.exp * 1000))
-        console.log("Token issued at:", new Date(payload.iat * 1000))
-        console.log("Current time:", new Date())
-        console.log("Token expired?", Date.now() > payload.exp * 1000)
-      } catch (e) {
-        console.error("Failed to decode token:", e)
-      }
-    }
-    console.log("========================")
-  }
-
   const fetchProducts = async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/products/all-products`)
@@ -64,7 +51,16 @@ export default function AdminProductUpload() {
   const resetForm = () => {
     setName("")
     setVariants([
-      { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "", isOutOfStock: false },
+      {
+        sizeValue: "",
+        sizeUnit: "ml",
+        price: "",
+        discountPercent: "",
+        finalPrice: "",
+        stock: "",
+        isOutOfStock: false,
+        images: [],
+      },
     ])
     setImages([])
     setExistingImages([])
@@ -77,12 +73,36 @@ export default function AdminProductUpload() {
     setProductType("")
     const fileInput = document.getElementById("product-images")
     if (fileInput) fileInput.value = ""
+    // Reset variant image inputs
+    variants.forEach((_, i) => {
+      const variantInput = document.getElementById(`variant-images-${i}`)
+      if (variantInput) variantInput.value = ""
+    })
   }
 
   const handleImageChange = (e) => {
     if (e.target.files) {
       setImages([...images, ...Array.from(e.target.files)])
     }
+  }
+
+  const handleVariantImageChange = (variantIndex, e) => {
+    if (e.target.files) {
+      const newVariantImages = Array.from(e.target.files)
+      setVariants((prev) => {
+        const updated = [...prev]
+        updated[variantIndex].images = [...(updated[variantIndex].images || []), ...newVariantImages]
+        return updated
+      })
+    }
+  }
+
+  const removeVariantImage = (variantIndex, imageIndex) => {
+    setVariants((prev) => {
+      const updated = [...prev]
+      updated[variantIndex].images.splice(imageIndex, 1)
+      return updated
+    })
   }
 
   const handleImageRemove = (publicId) => {
@@ -122,6 +142,7 @@ export default function AdminProductUpload() {
         finalPrice: "",
         stock: "",
         isOutOfStock: false,
+        images: [],
       },
     ])
   }
@@ -182,13 +203,8 @@ export default function AdminProductUpload() {
   }
 
   const handleSubmit = async () => {
-    console.log("🔘 Submit button clicked")
-    debugToken()
-    console.log("⚠️ Skipping token validation, proceeding with request...")
-
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
-      console.warn("❌ Validation failed", { name, variants })
       return
     }
 
@@ -197,8 +213,12 @@ export default function AdminProductUpload() {
       return
     }
 
-    if (images.length === 0 && existingImages.length === 0) {
-      alert("Please upload at least one image for the product.")
+    if (
+      images.length === 0 &&
+      existingImages.length === 0 &&
+      variants.every((v) => !v.images || v.images.length === 0)
+    ) {
+      alert("Please upload at least one image for the product or its variants.")
       return
     }
 
@@ -225,7 +245,17 @@ export default function AdminProductUpload() {
     formData.append("keywords", JSON.stringify(keywordsList))
     formData.append("productType", productType)
 
+    // Add main product images
     images.forEach((img) => formData.append("images", img))
+
+    // Add variant-specific images
+    variants.forEach((variant, index) => {
+      if (variant.images && variant.images.length > 0) {
+        variant.images.forEach((img) => {
+          formData.append(`variant_${index}`, img)
+        })
+      }
+    })
 
     if (removedImages.length > 0) {
       formData.append("removedImages", JSON.stringify(removedImages))
@@ -240,17 +270,15 @@ export default function AdminProductUpload() {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
         },
-        timeout: 30000,
+        timeout: 60000, // Increased timeout for multiple images
       }
 
       if (editingProduct) {
         res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
         alert("✅ Product updated")
-        console.log("🟢 Updated:", res.data)
       } else {
         res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
         alert("✅ Product uploaded")
-        console.log("🟢 Uploaded:", res.data)
       }
 
       resetForm()
@@ -291,6 +319,7 @@ export default function AdminProductUpload() {
           finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
           stock: v.stock,
           isOutOfStock: v.isOutOfStock || false,
+          images: v.images || [],
         }
       })
       .filter(Boolean)
@@ -350,12 +379,9 @@ export default function AdminProductUpload() {
     }
   }
 
-  // Updated function to toggle individual variant stock - FIXED
   const toggleVariantStock = async (productId, variantIndex, variant) => {
     try {
       const token = localStorage.getItem("adminToken")
-
-      // Get the current status from the variant object, default to false if undefined
       const currentStatus = variant?.isOutOfStock ?? false
 
       console.log("🔄 Toggling variant stock:", {
@@ -448,9 +474,9 @@ export default function AdminProductUpload() {
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {variants.map((variant, i) => (
-                  <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <div key={i} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-medium text-gray-900">Variant {i + 1}</h4>
                       {variants.length > 1 && (
@@ -463,7 +489,7 @@ export default function AdminProductUpload() {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                       {/* Size Value */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Size Value *</label>
@@ -570,6 +596,45 @@ export default function AdminProductUpload() {
                           </label>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Variant Images */}
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Images for {variant.sizeValue}
+                        {variant.sizeUnit} variant
+                      </label>
+                      <input
+                        id={`variant-images-${i}`}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => handleVariantImageChange(i, e)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+
+                      {/* Variant Images Preview */}
+                      {variant.images && variant.images.length > 0 && (
+                        <div className="mt-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                            {variant.images.map((img, imgIndex) => (
+                              <div key={imgIndex} className="relative">
+                                <img
+                                  src={img.url || URL.createObjectURL(img)}
+                                  alt={`Variant ${i + 1} image ${imgIndex + 1}`}
+                                  className="w-full h-20 object-cover rounded-lg border"
+                                />
+                                <button
+                                  onClick={() => removeVariantImage(i, imgIndex)}
+                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -704,9 +769,10 @@ export default function AdminProductUpload() {
               />
             </div>
 
-            {/* Image Upload */}
+            {/* Main Product Images */}
             <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Product Images *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Main Product Images</label>
+              <p className="text-sm text-gray-500 mb-2">These images will be shown as general product images</p>
               <input
                 id="product-images"
                 type="file"
@@ -836,6 +902,9 @@ export default function AdminProductUpload() {
                               <span className="text-sm text-gray-600 ml-2">
                                 ₹{v.price} {v.discountPercent > 0 && `(${v.discountPercent}% off)`}
                               </span>
+                              {v.images && v.images.length > 0 && (
+                                <span className="text-xs text-blue-600 ml-2">({v.images.length} images)</span>
+                              )}
                             </div>
                             <span
                               className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
@@ -873,12 +942,15 @@ export default function AdminProductUpload() {
                       >
                         Delete
                       </button>
-                      <button
-                        onClick={() => toggleStock(product._id, product.isOutOfStock)}
-                        className="w-full bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium"
-                      >
-                        {product.isOutOfStock ? "Set Product In Stock" : "Set Product Out of Stock"}
-                      </button>
+                      {/* Only show product-level stock button if no variants exist */}
+                      {(!product.variants || product.variants.length === 0) && (
+                        <button
+                          onClick={() => toggleStock(product._id, product.isOutOfStock)}
+                          className="w-full bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium"
+                        >
+                          {product.isOutOfStock ? "Set Product In Stock" : "Set Product Out of Stock"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
