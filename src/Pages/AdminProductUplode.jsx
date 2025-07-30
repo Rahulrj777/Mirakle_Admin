@@ -360,10 +360,10 @@ export default function AdminProductUpload() {
     try {
       const token = localStorage.getItem("adminToken");
       await axios.put(
-        `${API_BASE}/products/toggle/variant-stock/${productId}`,
+        `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
         { variantIndex, isOutOfStock: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
-      );
+      )
       alert("Variant stock updated!");
       fetchProducts(); // refresh product list
     } catch (err) {
