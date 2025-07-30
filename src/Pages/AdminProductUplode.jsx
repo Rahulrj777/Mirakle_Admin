@@ -868,7 +868,7 @@ export default function AdminProductUpload() {
                         onClick={() => toggleStock(product._id, product.isOutOfStock)}
                         className="w-full bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium"
                       >
-                        {product.isOutOfStock ? "Set Product In Stock" : "Set Product Out of Stock"}
+                        {product.isOutOfStock ? "In Stock" : "Out of Stock"}
                       </button>
                     </div>
                   </div>
