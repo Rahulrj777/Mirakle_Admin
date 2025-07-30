@@ -830,7 +830,7 @@ export default function AdminProductUpload() {
                           </div>
                           <button
                             disabled={loadingMap[`variant-${product._id}-${i}`]}
-                            onClick={() => toggleVariantStock(product._id, i, variant.isOutOfStock)}
+                            onClick={() => toggleVariantStock(product._id, i, v.isOutOfStock)}
                             className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
                               v.isOutOfStock
                                 ? "bg-green-600 text-white hover:bg-green-700"
