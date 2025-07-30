@@ -350,37 +350,36 @@ export default function AdminProductUpload() {
     }
   }
 
-  // Updated function to toggle individual variant stock
-  const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
-    try {
-      const token = localStorage.getItem("adminToken")
-      console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
+  // const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
+  //   try {
+  //     const token = localStorage.getItem("adminToken")
+  //     console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
 
-      await axios.put(
-        `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
-        {
-          variantIndex: variantIndex,
-          isOutOfStock: !currentStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+  //     await axios.put(
+  //       `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
+  //       {
+  //         variantIndex: variantIndex,
+  //         isOutOfStock: !currentStatus,
+  //       },
+  //       {
+  //         headers: { Authorization: `Bearer ${token}` },
+  //       },
+  //     )
 
-      console.log("✅ Variant stock toggled successfully")
-      fetchProducts()
-    } catch (err) {
-      console.error("❌ Variant stock update failed:", err.response?.data || err.message)
-      if (err.response?.status === 401) {
-        alert("Your session has expired. Please log in again.")
-        navigate("/login")
-      } else if (err.response?.status === 404) {
-        alert("API endpoint not found. Please check if the backend route exists.")
-      } else {
-        alert(err.response?.data?.message || "Variant stock update failed")
-      }
-    }
-  }
+  //     console.log("✅ Variant stock toggled successfully")
+  //     fetchProducts()
+  //   } catch (err) {
+  //     console.error("❌ Variant stock update failed:", err.response?.data || err.message)
+  //     if (err.response?.status === 401) {
+  //       alert("Your session has expired. Please log in again.")
+  //       navigate("/login")
+  //     } else if (err.response?.status === 404) {
+  //       alert("API endpoint not found. Please check if the backend route exists.")
+  //     } else {
+  //       alert(err.response?.data?.message || "Variant stock update failed")
+  //     }
+  //   }
+  // }
 
   return (
     <AdminLayout>
