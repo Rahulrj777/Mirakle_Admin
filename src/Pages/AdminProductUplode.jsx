@@ -62,17 +62,12 @@ export default function AdminProductUpload() {
         images: [],
       },
     ])
-    setImages([])
-    setExistingImages([])
-    setRemovedImages([])
     setEditingProduct(null)
     setDetailsList([{ key: "", value: "" }])
     setDescription("")
     setKeywords("")
     setKeywordsList([])
     setProductType("")
-    const fileInput = document.getElementById("product-images")
-    if (fileInput) fileInput.value = ""
     // Reset variant image inputs
     variants.forEach((_, i) => {
       const variantInput = document.getElementById(`variant-images-${i}`)
@@ -213,12 +208,8 @@ export default function AdminProductUpload() {
       return
     }
 
-    if (
-      images.length === 0 &&
-      existingImages.length === 0 &&
-      variants.every((v) => !v.images || v.images.length === 0)
-    ) {
-      alert("Please upload at least one image for the product or its variants.")
+    if (variants.every((v) => !v.images || v.images.length === 0)) {
+      alert("Please upload at least one image for at least one variant.")
       return
     }
 
@@ -245,9 +236,6 @@ export default function AdminProductUpload() {
     formData.append("keywords", JSON.stringify(keywordsList))
     formData.append("productType", productType)
 
-    // Add main product images
-    images.forEach((img) => formData.append("images", img))
-
     // Add variant-specific images
     variants.forEach((variant, index) => {
       if (variant.images && variant.images.length > 0) {
@@ -264,6 +252,7 @@ export default function AdminProductUpload() {
     const token = localStorage.getItem("adminToken")
 
     try {
+      let res
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -273,10 +262,10 @@ export default function AdminProductUpload() {
       }
 
       if (editingProduct) {
-        await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
+        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
         alert("✅ Product updated")
       } else {
-        await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
+        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
         alert("✅ Product uploaded")
       }
 
@@ -324,9 +313,6 @@ export default function AdminProductUpload() {
       .filter(Boolean)
 
     setVariants(parsedVariants)
-    setImages([])
-    setExistingImages(product.images?.others || [])
-    setRemovedImages([])
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
     setDescription(product.description || "")
     setKeywordsList(product.keywords || [])
@@ -766,68 +752,6 @@ export default function AdminProductUpload() {
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-            </div>
-
-            {/* Main Product Images */}
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Main Product Images</label>
-              <p className="text-sm text-gray-500 mb-2">These images will be shown as general product images</p>
-              <input
-                id="product-images"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-
-              {/* New Images Preview */}
-              {images.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">New Images</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {images.map((img, i) => (
-                      <div key={i} className="relative">
-                        <img
-                          src={URL.createObjectURL(img) || "/placeholder.svg"}
-                          alt={`New image ${i}`}
-                          className="w-full h-24 object-cover rounded-lg border"
-                        />
-                        <button
-                          onClick={() => removeNewImage(i)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Existing Images Preview */}
-              {existingImages.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Images</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {existingImages.map((img, i) => (
-                      <div key={i} className="relative">
-                        <img
-                          src={img.url || "/placeholder.svg?height=100&width=100"}
-                          alt={`Existing image ${i}`}
-                          className="w-full h-24 object-cover rounded-lg border"
-                        />
-                        <button
-                          onClick={() => handleImageRemove(img.public_id)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Submit Buttons */}
