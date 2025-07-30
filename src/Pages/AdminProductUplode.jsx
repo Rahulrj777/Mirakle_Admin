@@ -264,7 +264,6 @@ export default function AdminProductUpload() {
     const token = localStorage.getItem("adminToken")
 
     try {
-      let res
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -274,10 +273,10 @@ export default function AdminProductUpload() {
       }
 
       if (editingProduct) {
-        res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
+        await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
         alert("✅ Product updated")
       } else {
-        res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
+        await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
         alert("✅ Product uploaded")
       }
 
