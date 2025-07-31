@@ -23,6 +23,7 @@ export default function AdminProductUpload() {
   const [productType, setProductType] = useState("")
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
+  const [loadingMap, setLoadingMap] = useState({});
 
   useEffect(() => {
     fetchProducts()
@@ -326,61 +327,28 @@ export default function AdminProductUpload() {
     }
   }
 
-  const toggleStock = async (id, currentStatus) => {
-    try {
-      const token = localStorage.getItem("adminToken")
-      await axios.put(
-        `${API_BASE}/api/products/toggle-stock/${id}`,
-        {
-          isOutOfStock: !currentStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
-      fetchProducts()
-    } catch (err) {
-      console.error("Stock update failed:", err.response?.data || err.message)
-      if (err.response?.status === 401) {
-        alert("Your session has expired. Please log in again.")
-        navigate("/login")
-      } else {
-        alert(err.response?.data?.message || "Stock update failed")
-      }
-    }
-  }
-
-  // Updated function to toggle individual variant stock
   const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
-    try {
-      const token = localStorage.getItem("adminToken")
-      console.log("🔄 Toggling variant stock:", { productId, variantIndex, currentStatus })
+    const key = `variant-${productId}-${variantIndex}`;
+    if (loadingMap[key]) return; // prevent duplicate requests
 
+    setLoadingMap((prev) => ({ ...prev, [key]: true }));
+
+    try {
+      const token = localStorage.getItem("adminToken");
       await axios.put(
         `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
-        {
-          variantIndex: variantIndex,
-          isOutOfStock: !currentStatus,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { variantIndex, isOutOfStock: !currentStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
       )
-
-      console.log("✅ Variant stock toggled successfully")
-      fetchProducts()
+      alert("Variant stock updated!");
+      fetchProducts(); // refresh product list
     } catch (err) {
-      console.error("❌ Variant stock update failed:", err.response?.data || err.message)
-      if (err.response?.status === 401) {
-        alert("Your session has expired. Please log in again.")
-        navigate("/login")
-      } else if (err.response?.status === 404) {
-        alert("API endpoint not found. Please check if the backend route exists.")
-      } else {
-        alert(err.response?.data?.message || "Variant stock update failed")
-      }
+      alert("Failed to update variant stock.");
+      console.error(err);
+    } finally {
+      setLoadingMap((prev) => ({ ...prev, [key]: false }));
     }
-  }
+  };
 
   return (
     <AdminLayout>
@@ -837,6 +805,7 @@ export default function AdminProductUpload() {
                             </span>
                           </div>
                           <button
+                            disabled={loadingMap[`variant-${product._id}-${i}`]}
                             onClick={() => toggleVariantStock(product._id, i, v.isOutOfStock)}
                             className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
                               v.isOutOfStock
@@ -863,12 +832,6 @@ export default function AdminProductUpload() {
                         className="w-full bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-colors font-medium"
                       >
                         Delete
-                      </button>
-                      <button
-                        onClick={() => toggleStock(product._id, product.isOutOfStock)}
-                        className="w-full bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-colors font-medium"
-                      >
-                        {product.isOutOfStock ? "In Stock" : "Out of Stock"}
                       </button>
                     </div>
                   </div>
