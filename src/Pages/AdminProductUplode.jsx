@@ -30,12 +30,6 @@ export default function AdminProductUpload() {
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
   const [loadingMap, setLoadingMap] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [migrationLoading, setMigrationLoading] = useState(false)
-  const [migrationResult, setMigrationResult] = useState(null)
-
-  const user = JSON.parse(localStorage.getItem("mirakleUser"))
-  const token = user?.token
 
   useEffect(() => {
     fetchProducts()
@@ -294,6 +288,7 @@ export default function AdminProductUpload() {
 
       formData.append("variants", JSON.stringify(preparedVariants))
 
+      const token = localStorage.getItem("adminToken")
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -470,6 +465,34 @@ export default function AdminProductUpload() {
 
   const isFileObject = (img) => {
     return typeof img === "object" && img.constructor === File
+  }
+
+  // Bulk migrate all products
+  const handleBulkMigration = async () => {
+    if (!window.confirm("This will migrate ALL products with common images to variant-specific images. Continue?"))
+      return
+
+    try {
+      const token = localStorage.getItem("adminToken")
+      console.log("🔄 Starting bulk migration...")
+
+      const response = await axios.post(
+        `${API_BASE}/api/products/bulk-migrate-images`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+
+      console.log("🔄 Bulk migration result:", response.data)
+      alert(
+        `✅ Migration completed!\n${response.data.migratedCount} products migrated\n${response.data.errorCount} errors`,
+      )
+
+      // Refresh products list
+      await fetchProducts()
+    } catch (err) {
+      console.error("❌ Bulk migration failed:", err)
+      alert("❌ Migration failed: " + (err.response?.data?.message || err.message))
+    }
   }
 
   return (
