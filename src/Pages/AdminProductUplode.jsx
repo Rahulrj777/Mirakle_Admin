@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -452,28 +450,33 @@ export default function AdminProductUpload() {
 
   // Bulk migrate all products
   const handleBulkMigration = async () => {
-    if (!window.confirm("This will migrate ALL products to the new image structure. Continue?")) return
+    if (
+      !window.confirm(
+        "This will fix the database structure and migrate ALL products to support variant images. Continue?",
+      )
+    )
+      return
 
     try {
       const token = localStorage.getItem("adminToken")
-      console.log("🔄 Starting bulk migration...")
+      console.log("🔄 Starting database structure fix...")
 
       const response = await axios.post(
-        `${API_BASE}/api/products/bulk-migrate-images`,
+        `${API_BASE}/api/products/fix-database-structure`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
 
-      console.log("🔄 Bulk migration result:", response.data)
+      console.log("🔄 Database fix result:", response.data)
       alert(
-        `✅ Bulk migration completed!\n${response.data.migratedCount} products migrated\n${response.data.errorCount} errors`,
+        `✅ Database structure fixed successfully!\n${response.data.fixedCount} products updated\n${response.data.errorCount} errors\n\nAll variants now support images!`,
       )
 
       // Refresh products list
       await fetchProducts()
     } catch (err) {
-      console.error("❌ Bulk migration failed:", err)
-      alert("❌ Bulk migration failed: " + (err.response?.data?.message || err.message))
+      console.error("❌ Database structure fix failed:", err)
+      alert("❌ Database structure fix failed: " + (err.response?.data?.message || err.message))
     }
   }
 
@@ -499,7 +502,7 @@ export default function AdminProductUpload() {
                   onClick={handleBulkMigration}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                 >
-                  🔄 Fix All Products
+                  🔧 Fix Database Structure
                 </button>
                 {editingProduct && (
                   <button
