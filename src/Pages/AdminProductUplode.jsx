@@ -1,8 +1,5 @@
-"use client"
-
 import { useState, useEffect } from "react"
 import axios from "axios"
-import { axiosWithToken } from "../utils/axiosWithToken"
 import { API_BASE } from "../utils/api"
 import AdminLayout from "../Componenets/AdminLayout"
 import { useNavigate } from "react-router-dom"
@@ -33,37 +30,26 @@ export default function AdminProductUpload() {
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
   const [loadingMap, setLoadingMap] = useState({})
-  const [loading, setLoading] = useState(false)
   const [migrationLoading, setMigrationLoading] = useState(false)
-  const [migrationResult, setMigrationResult] = useState(null)
-
-  const user = JSON.parse(localStorage.getItem("mirakleUser"))
-  const token = user?.token
 
   useEffect(() => {
     fetchProducts()
   }, [])
 
-  const debugToken = () => {
+  const getAuthHeaders = () => {
     const token = localStorage.getItem("adminToken")
-    console.log("=== TOKEN DEBUG INFO ===")
-    console.log("Token exists:", !!token)
-    console.log("Token length:", token?.length)
-    console.log("Token first 50 chars:", token?.substring(0, 50))
-    console.log("Token last 20 chars:", token?.substring(token.length - 20))
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]))
-        console.log("Token payload:", payload)
-        console.log("Token expires at:", new Date(payload.exp * 1000))
-        console.log("Token issued at:", new Date(payload.iat * 1000))
-        console.log("Current time:", new Date())
-        console.log("Token expired?", Date.now() > payload.exp * 1000)
-      } catch (e) {
-        console.error("Failed to decode token:", e)
-      }
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     }
-    console.log("========================")
+  }
+
+  const getMultipartHeaders = () => {
+    const token = localStorage.getItem("adminToken")
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    }
   }
 
   const fetchProducts = async () => {
@@ -102,12 +88,11 @@ export default function AdminProductUpload() {
   // Force migrate product images
   const forceImageMigration = async (productId) => {
     try {
-      const token = localStorage.getItem("adminToken")
       console.log("🔄 FORCE migrating product:", productId)
       const response = await axios.post(
         `${API_BASE}/api/products/migrate-images/${productId}`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
       )
       console.log("🔄 FORCE Migration result:", response.data)
       return response.data.product || null
@@ -134,10 +119,9 @@ export default function AdminProductUpload() {
     // If it's an existing image (not a File object), delete from server
     if (!isFileObject(imageToRemove) && editingProduct) {
       try {
-        const token = localStorage.getItem("adminToken")
         await axios.delete(
           `${API_BASE}/api/products/variant-image/${editingProduct._id}/${variantIndex}/${imageIndex}`,
-          { headers: { Authorization: `Bearer ${token}` } },
+          { headers: getAuthHeaders() },
         )
         console.log("✅ Image deleted from server")
       } catch (err) {
@@ -243,7 +227,6 @@ export default function AdminProductUpload() {
 
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
-    debugToken()
 
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
@@ -298,10 +281,7 @@ export default function AdminProductUpload() {
       formData.append("variants", JSON.stringify(preparedVariants))
 
       const config = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: getMultipartHeaders(),
         timeout: 30000,
       }
 
@@ -405,9 +385,8 @@ export default function AdminProductUpload() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
     try {
-      const token = localStorage.getItem("adminToken")
       await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       })
       alert("Product deleted successfully")
       fetchProducts()
@@ -427,11 +406,10 @@ export default function AdminProductUpload() {
     if (loadingMap[key]) return
     setLoadingMap((prev) => ({ ...prev, [key]: true }))
     try {
-      const token = localStorage.getItem("adminToken")
       await axios.put(
         `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
         { variantIndex, isOutOfStock: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: getAuthHeaders() },
       )
       alert("Variant stock updated!")
       fetchProducts()
@@ -475,41 +453,33 @@ export default function AdminProductUpload() {
     return typeof img === "object" && img.constructor === File
   }
 
-  // Simplified migration function
+  // Bulk migrate all products
   const handleBulkMigration = async () => {
+    if (!window.confirm("This will migrate ALL products with common images to variant-specific images. Continue?"))
+      return
+
     try {
       setMigrationLoading(true)
-      setMigrationResult(null)
-
       console.log("🔄 Starting bulk migration...")
-      const response = await axiosWithToken(token).post(`${API_BASE}/api/products/bulk-migrate-images`)
 
-      setMigrationResult(response.data)
-      console.log("✅ Migration completed:", response.data)
+      const response = await axios.post(
+        `${API_BASE}/api/products/bulk-migrate-images`,
+        {},
+        { headers: getAuthHeaders() },
+      )
+
+      console.log("🔄 Bulk migration result:", response.data)
+      alert(
+        `✅ Migration completed!\n${response.data.migratedCount} products migrated\n${response.data.errorCount} errors`,
+      )
 
       // Refresh products list
       await fetchProducts()
-    } catch (error) {
-      console.error("❌ Migration failed:", error)
-      setMigrationResult({
-        message: "Migration failed",
-        error: error.response?.data?.message || error.message,
-      })
+    } catch (err) {
+      console.error("❌ Bulk migration failed:", err)
+      alert("❌ Migration failed: " + (err.response?.data?.message || err.message))
     } finally {
       setMigrationLoading(false)
-    }
-  }
-
-  // Load products
-  const loadProducts = async () => {
-    try {
-      setLoading(true)
-      const response = await axiosWithToken(token).get(`${API_BASE}/api/products`)
-      setProducts(response.data)
-    } catch (error) {
-      console.error("Failed to load products:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -533,9 +503,10 @@ export default function AdminProductUpload() {
               <div className="flex gap-2">
                 <button
                   onClick={handleBulkMigration}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  disabled={migrationLoading}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                 >
-                  🔄 Migrate Images
+                  {migrationLoading ? "🔄 Migrating..." : "🔄 Migrate Images"}
                 </button>
                 {editingProduct && (
                   <button
@@ -940,7 +911,7 @@ export default function AdminProductUpload() {
                     {product.images?.others?.length > 0 && (
                       <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
                         <p className="text-xs text-orange-700">
-                          🔄 This product has common images that will be FORCE migrated to variants when edited.
+                          🔄 This product has common images that will be migrated to variants when edited.
                         </p>
                       </div>
                     )}
@@ -1005,7 +976,7 @@ export default function AdminProductUpload() {
                         onClick={() => handleEdit(product)}
                         className="w-full bg-yellow-500 text-white px-4 py-2 rounded-xl hover:bg-yellow-600 transition-colors font-medium"
                       >
-                        Edit {product.images?.others?.length > 0 && "(Will Force Migrate)"}
+                        Edit {product.images?.others?.length > 0 && "(Will Migrate)"}
                       </button>
                       <button
                         onClick={() => handleDelete(product._id)}
