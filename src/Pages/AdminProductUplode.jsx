@@ -8,7 +8,16 @@ export default function AdminProductUpload() {
   const navigate = useNavigate()
   const [name, setName] = useState("")
   const [variants, setVariants] = useState([
-    { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "", isOutOfStock: false },
+    {
+      sizeValue: "",
+      sizeUnit: "ml",
+      price: "",
+      discountPercent: "",
+      finalPrice: "",
+      stock: "",
+      isOutOfStock: false,
+      images: [], // Add images array for each variant
+    },
   ])
   const [images, setImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
@@ -23,7 +32,7 @@ export default function AdminProductUpload() {
   const [productType, setProductType] = useState("")
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
-  const [loadingMap, setLoadingMap] = useState({});
+  const [loadingMap, setLoadingMap] = useState({})
 
   useEffect(() => {
     fetchProducts()
@@ -65,7 +74,16 @@ export default function AdminProductUpload() {
   const resetForm = () => {
     setName("")
     setVariants([
-      { sizeValue: "", sizeUnit: "ml", price: "", discountPercent: "", finalPrice: "", stock: "", isOutOfStock: false },
+      {
+        sizeValue: "",
+        sizeUnit: "ml",
+        price: "",
+        discountPercent: "",
+        finalPrice: "",
+        stock: "",
+        isOutOfStock: false,
+        images: [],
+      },
     ])
     setImages([])
     setExistingImages([])
@@ -84,6 +102,27 @@ export default function AdminProductUpload() {
     if (e.target.files) {
       setImages([...images, ...Array.from(e.target.files)])
     }
+  }
+
+  // New function to handle variant-specific image uploads
+  const handleVariantImageChange = (variantIndex, e) => {
+    if (e.target.files) {
+      const newImages = Array.from(e.target.files)
+      setVariants((prev) => {
+        const updated = [...prev]
+        updated[variantIndex].images = [...(updated[variantIndex].images || []), ...newImages]
+        return updated
+      })
+    }
+  }
+
+  // New function to remove variant-specific images
+  const removeVariantImage = (variantIndex, imageIndex) => {
+    setVariants((prev) => {
+      const updated = [...prev]
+      updated[variantIndex].images.splice(imageIndex, 1)
+      return updated
+    })
   }
 
   const handleImageRemove = (publicId) => {
@@ -123,6 +162,7 @@ export default function AdminProductUpload() {
         finalPrice: "",
         stock: "",
         isOutOfStock: false,
+        images: [], // Initialize with empty images array
       },
     ])
   }
@@ -182,59 +222,96 @@ export default function AdminProductUpload() {
     }
   }
 
+  // Helper function to upload images to Cloudinary
+  const uploadImageToCloudinary = async (imageFile) => {
+    const formData = new FormData()
+    formData.append("file", imageFile)
+    formData.append("upload_preset", "your_upload_preset") // You'll need to set this up in Cloudinary
+
+    try {
+      const response = await fetch("https://api.cloudinary.com/v1_1/your_cloud_name/image/upload", {
+        method: "POST",
+        body: formData,
+      })
+      const data = await response.json()
+      return { url: data.secure_url, public_id: data.public_id }
+    } catch (error) {
+      console.error("Cloudinary upload failed:", error)
+      throw error
+    }
+  }
+
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
     debugToken()
     console.log("⚠️ Skipping token validation, proceeding with request...")
-
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
       console.warn("❌ Validation failed", { name, variants })
       return
     }
-
     if (!productType) {
       alert("Please select a product type.")
       return
     }
-
-    if (images.length === 0 && existingImages.length === 0) {
-      alert("Please upload at least one image for the product.")
+    if (images.length === 0 && existingImages.length === 0 && !variants.some((v) => v.images && v.images.length > 0)) {
+      alert("Please upload at least one image for the product or variants.")
       return
     }
 
-    const preparedVariants = variants.map((v) => ({
-      size: `${v.sizeValue}${v.sizeUnit}`,
-      price: Number.parseFloat(v.price),
-      discountPercent: Number.parseFloat(v.discountPercent),
-      stock: Number.parseInt(v.stock),
-      isOutOfStock: Boolean(v.isOutOfStock),
-    }))
-
-    const detailsObject = {}
-    detailsList.forEach((item) => {
-      if (item.key && item.value) {
-        detailsObject[item.key] = item.value
-      }
-    })
-
-    const formData = new FormData()
-    formData.append("name", name)
-    formData.append("variants", JSON.stringify(preparedVariants))
-    formData.append("description", description)
-    formData.append("details", JSON.stringify(detailsObject))
-    formData.append("keywords", JSON.stringify(keywordsList))
-    formData.append("productType", productType)
-
-    images.forEach((img) => formData.append("images", img))
-
-    if (removedImages.length > 0) {
-      formData.append("removedImages", JSON.stringify(removedImages))
-    }
-
-    const token = localStorage.getItem("adminToken")
-
     try {
+      // Upload variant-specific images to Cloudinary
+      const preparedVariants = await Promise.all(
+        variants.map(async (v) => {
+          let variantImages = []
+          if (v.images && v.images.length > 0) {
+            variantImages = await Promise.all(
+              v.images.map(async (img) => {
+                if (typeof img === "object" && img.constructor === File) {
+                  // Upload new image
+                  const uploadResult = await uploadImageToCloudinary(img)
+                  return uploadResult
+                } else {
+                  // Existing image
+                  return img
+                }
+              }),
+            )
+          }
+
+          return {
+            size: `${v.sizeValue}${v.sizeUnit}`,
+            price: Number.parseFloat(v.price),
+            discountPercent: Number.parseFloat(v.discountPercent),
+            stock: Number.parseInt(v.stock),
+            isOutOfStock: Boolean(v.isOutOfStock),
+            images: variantImages, // Add variant-specific images
+          }
+        }),
+      )
+
+      const detailsObject = {}
+      detailsList.forEach((item) => {
+        if (item.key && item.value) {
+          detailsObject[item.key] = item.value
+        }
+      })
+
+      const formData = new FormData()
+      formData.append("name", name)
+      formData.append("variants", JSON.stringify(preparedVariants))
+      formData.append("description", description)
+      formData.append("details", JSON.stringify(detailsObject))
+      formData.append("keywords", JSON.stringify(keywordsList))
+      formData.append("productType", productType)
+
+      images.forEach((img) => formData.append("images", img))
+
+      if (removedImages.length > 0) {
+        formData.append("removedImages", JSON.stringify(removedImages))
+      }
+
+      const token = localStorage.getItem("adminToken")
       let res
       const config = {
         headers: {
@@ -258,7 +335,6 @@ export default function AdminProductUpload() {
       fetchProducts()
     } catch (err) {
       console.error("❌ Operation error:", err.response?.data || err.message)
-
       if (err.response?.status === 401) {
         alert("Your session has expired. Please log in again.")
         localStorage.removeItem("adminToken")
@@ -278,7 +354,6 @@ export default function AdminProductUpload() {
     setEditingProduct(product)
     setName(product.title)
     setProductType(product.productType || "")
-
     const parsedVariants = product.variants
       .map((v) => {
         const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
@@ -292,10 +367,10 @@ export default function AdminProductUpload() {
           finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
           stock: v.stock,
           isOutOfStock: v.isOutOfStock || false,
+          images: v.images || [], // Load existing variant images
         }
       })
       .filter(Boolean)
-
     setVariants(parsedVariants)
     setImages([])
     setExistingImages(product.images?.others || [])
@@ -308,7 +383,6 @@ export default function AdminProductUpload() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return
-
     try {
       const token = localStorage.getItem("adminToken")
       await axios.delete(`${API_BASE}/api/products/delete/${id}`, {
@@ -328,27 +402,25 @@ export default function AdminProductUpload() {
   }
 
   const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
-    const key = `variant-${productId}-${variantIndex}`;
-    if (loadingMap[key]) return; // prevent duplicate requests
-
-    setLoadingMap((prev) => ({ ...prev, [key]: true }));
-
+    const key = `variant-${productId}-${variantIndex}`
+    if (loadingMap[key]) return // prevent duplicate requests
+    setLoadingMap((prev) => ({ ...prev, [key]: true }))
     try {
-      const token = localStorage.getItem("adminToken");
+      const token = localStorage.getItem("adminToken")
       await axios.put(
         `${API_BASE}/api/products/toggle-variant-stock/${productId}`,
         { variantIndex, isOutOfStock: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       )
-      alert("Variant stock updated!");
-      fetchProducts(); // refresh product list
+      alert("Variant stock updated!")
+      fetchProducts() // refresh product list
     } catch (err) {
-      alert("Failed to update variant stock.");
-      console.error(err);
+      alert("Failed to update variant stock.")
+      console.error(err)
     } finally {
-      setLoadingMap((prev) => ({ ...prev, [key]: false }));
+      setLoadingMap((prev) => ({ ...prev, [key]: false }))
     }
-  };
+  }
 
   return (
     <AdminLayout>
@@ -381,7 +453,6 @@ export default function AdminProductUpload() {
           {/* Product Form */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Product Information</h2>
-
             {/* Product Name */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
@@ -406,7 +477,6 @@ export default function AdminProductUpload() {
                   Add Variant
                 </button>
               </div>
-
               <div className="space-y-4">
                 {variants.map((variant, i) => (
                   <div key={i} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -421,7 +491,6 @@ export default function AdminProductUpload() {
                         </button>
                       )}
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       {/* Size Value */}
                       <div>
@@ -434,7 +503,6 @@ export default function AdminProductUpload() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-
                       {/* Size Unit */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
@@ -449,7 +517,6 @@ export default function AdminProductUpload() {
                           <option value="kg">kg</option>
                         </select>
                       </div>
-
                       {/* Price */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹) *</label>
@@ -461,7 +528,6 @@ export default function AdminProductUpload() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-
                       {/* Discount */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Discount (%)</label>
@@ -473,7 +539,6 @@ export default function AdminProductUpload() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-
                       {/* Final Price (Read-only) */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Final Price (₹)</label>
@@ -484,7 +549,6 @@ export default function AdminProductUpload() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
                         />
                       </div>
-
                       {/* Stock */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
@@ -496,7 +560,6 @@ export default function AdminProductUpload() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
-
                       {/* Out of Stock Toggle */}
                       <div className="sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
@@ -529,6 +592,44 @@ export default function AdminProductUpload() {
                           </label>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Variant-specific Image Upload */}
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Variant {i + 1} Images</label>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => handleVariantImageChange(i, e)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      {/* Variant Images Preview */}
+                      {variant.images && variant.images.length > 0 && (
+                        <div className="mt-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                            {variant.images.map((img, imgIndex) => (
+                              <div key={imgIndex} className="relative">
+                                <img
+                                  src={
+                                    typeof img === "object" && img.constructor === File
+                                      ? URL.createObjectURL(img)
+                                      : img.url || "/placeholder.svg"
+                                  }
+                                  alt={`Variant ${i + 1} image ${imgIndex + 1}`}
+                                  className="w-full h-20 object-cover rounded-lg border"
+                                />
+                                <button
+                                  onClick={() => removeVariantImage(i, imgIndex)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -663,9 +764,11 @@ export default function AdminProductUpload() {
               />
             </div>
 
-            {/* Image Upload */}
+            {/* Common Product Images */}
             <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Product Images *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Common Product Images (Optional - fallback if variant has no images)
+              </label>
               <input
                 id="product-images"
                 type="file"
@@ -674,7 +777,6 @@ export default function AdminProductUpload() {
                 onChange={handleImageChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-
               {/* New Images Preview */}
               {images.length > 0 && (
                 <div className="mt-4">
@@ -698,7 +800,6 @@ export default function AdminProductUpload() {
                   </div>
                 </div>
               )}
-
               {/* Existing Images Preview */}
               {existingImages.length > 0 && (
                 <div className="mt-4">
@@ -757,7 +858,6 @@ export default function AdminProductUpload() {
                 className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-80"
               />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {products
                 .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -775,16 +875,13 @@ export default function AdminProductUpload() {
                       alt={product.title}
                       className="w-full h-48 object-cover mb-4 rounded-xl"
                     />
-
                     <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{product.title}</h3>
-
                     {product.productType && (
                       <p className="text-sm text-gray-600 mb-4">
                         <span className="font-medium">Type:</span> {product.productType}
                       </p>
                     )}
-
-                    {/* Variants with individual stock status */}
+                    {/* Variants with individual stock status and images */}
                     <div className="space-y-3 mb-6">
                       <h4 className="text-sm font-medium text-gray-700">Variants:</h4>
                       {product.variants?.map((v, i) => (
@@ -804,6 +901,27 @@ export default function AdminProductUpload() {
                               {v.isOutOfStock ? "Out of Stock" : "In Stock"}
                             </span>
                           </div>
+                          {/* Show variant images if available */}
+                          {v.images && v.images.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs text-gray-500 mb-2">Variant Images:</p>
+                              <div className="flex gap-1 overflow-x-auto">
+                                {v.images.slice(0, 3).map((img, imgIndex) => (
+                                  <img
+                                    key={imgIndex}
+                                    src={img.url || "/placeholder.svg"}
+                                    alt={`Variant ${i + 1} image ${imgIndex + 1}`}
+                                    className="w-12 h-12 object-cover rounded border flex-shrink-0"
+                                  />
+                                ))}
+                                {v.images.length > 3 && (
+                                  <div className="w-12 h-12 bg-gray-200 rounded border flex items-center justify-center text-xs text-gray-500">
+                                    +{v.images.length - 3}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                           <button
                             disabled={loadingMap[`variant-${product._id}-${i}`]}
                             onClick={() => toggleVariantStock(product._id, i, v.isOutOfStock)}
@@ -818,7 +936,6 @@ export default function AdminProductUpload() {
                         </div>
                       ))}
                     </div>
-
                     {/* Action Buttons - Column Layout */}
                     <div className="flex flex-col gap-2">
                       <button
@@ -837,7 +954,6 @@ export default function AdminProductUpload() {
                   </div>
                 ))}
             </div>
-
             {products.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">📦</div>
