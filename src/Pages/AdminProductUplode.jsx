@@ -1,5 +1,8 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
+import { axiosWithToken } from "../utils/axiosWithToken"
 import { API_BASE } from "../utils/api"
 import AdminLayout from "../Componenets/AdminLayout"
 import { useNavigate } from "react-router-dom"
@@ -30,6 +33,12 @@ export default function AdminProductUpload() {
   const [availableProductTypes, setAvailableProductTypes] = useState([])
   const [newProductTypeInput, setNewProductTypeInput] = useState("")
   const [loadingMap, setLoadingMap] = useState({})
+  const [loading, setLoading] = useState(false)
+  const [migrationLoading, setMigrationLoading] = useState(false)
+  const [migrationResult, setMigrationResult] = useState(null)
+
+  const user = JSON.parse(localStorage.getItem("mirakleUser"))
+  const token = user?.token
 
   useEffect(() => {
     fetchProducts()
@@ -288,7 +297,6 @@ export default function AdminProductUpload() {
 
       formData.append("variants", JSON.stringify(preparedVariants))
 
-      const token = localStorage.getItem("adminToken")
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -467,31 +475,41 @@ export default function AdminProductUpload() {
     return typeof img === "object" && img.constructor === File
   }
 
-  // Bulk migrate all products
+  // Simplified migration function
   const handleBulkMigration = async () => {
-    if (!window.confirm("This will migrate ALL products with common images to variant-specific images. Continue?"))
-      return
-
     try {
-      const token = localStorage.getItem("adminToken")
+      setMigrationLoading(true)
+      setMigrationResult(null)
+
       console.log("🔄 Starting bulk migration...")
+      const response = await axiosWithToken(token).post(`${API_BASE}/api/products/bulk-migrate-images`)
 
-      const response = await axios.post(
-        `${API_BASE}/api/products/bulk-migrate-images`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-
-      console.log("🔄 Bulk migration result:", response.data)
-      alert(
-        `✅ Migration completed!\n${response.data.migratedCount} products migrated\n${response.data.errorCount} errors`,
-      )
+      setMigrationResult(response.data)
+      console.log("✅ Migration completed:", response.data)
 
       // Refresh products list
       await fetchProducts()
-    } catch (err) {
-      console.error("❌ Bulk migration failed:", err)
-      alert("❌ Migration failed: " + (err.response?.data?.message || err.message))
+    } catch (error) {
+      console.error("❌ Migration failed:", error)
+      setMigrationResult({
+        message: "Migration failed",
+        error: error.response?.data?.message || error.message,
+      })
+    } finally {
+      setMigrationLoading(false)
+    }
+  }
+
+  // Load products
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      const response = await axiosWithToken(token).get(`${API_BASE}/api/products`)
+      setProducts(response.data)
+    } catch (error) {
+      console.error("Failed to load products:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
