@@ -19,9 +19,6 @@ export default function AdminProductUpload() {
       images: [], // Add images array for each variant
     },
   ])
-  const [images, setImages] = useState([])
-  const [existingImages, setExistingImages] = useState([])
-  const [removedImages, setRemovedImages] = useState([])
   const [products, setProducts] = useState([])
   const [editingProduct, setEditingProduct] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -85,23 +82,12 @@ export default function AdminProductUpload() {
         images: [],
       },
     ])
-    setImages([])
-    setExistingImages([])
-    setRemovedImages([])
     setEditingProduct(null)
     setDetailsList([{ key: "", value: "" }])
     setDescription("")
     setKeywords("")
     setKeywordsList([])
     setProductType("")
-    const fileInput = document.getElementById("product-images")
-    if (fileInput) fileInput.value = ""
-  }
-
-  const handleImageChange = (e) => {
-    if (e.target.files) {
-      setImages([...images, ...Array.from(e.target.files)])
-    }
   }
 
   // New function to handle variant-specific image uploads
@@ -123,17 +109,6 @@ export default function AdminProductUpload() {
       updated[variantIndex].images.splice(imageIndex, 1)
       return updated
     })
-  }
-
-  const handleImageRemove = (publicId) => {
-    setRemovedImages((prev) => [...prev, publicId])
-    setExistingImages((prev) => prev.filter((img) => img.public_id !== publicId))
-  }
-
-  const removeNewImage = (index) => {
-    const copy = [...images]
-    copy.splice(index, 1)
-    setImages(copy)
   }
 
   const handleVariantChange = (index, field, value) => {
@@ -222,29 +197,11 @@ export default function AdminProductUpload() {
     }
   }
 
-  // Helper function to upload images to Cloudinary
-  const uploadImageToCloudinary = async (imageFile) => {
-    const formData = new FormData()
-    formData.append("file", imageFile)
-    formData.append("upload_preset", "your_upload_preset") // You'll need to set this up in Cloudinary
-
-    try {
-      const response = await fetch("https://api.cloudinary.com/v1_1/your_cloud_name/image/upload", {
-        method: "POST",
-        body: formData,
-      })
-      const data = await response.json()
-      return { url: data.secure_url, public_id: data.public_id }
-    } catch (error) {
-      console.error("Cloudinary upload failed:", error)
-      throw error
-    }
-  }
-
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
     debugToken()
     console.log("⚠️ Skipping token validation, proceeding with request...")
+
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
       console.warn("❌ Validation failed", { name, variants })
@@ -254,42 +211,15 @@ export default function AdminProductUpload() {
       alert("Please select a product type.")
       return
     }
-    if (images.length === 0 && existingImages.length === 0 && !variants.some((v) => v.images && v.images.length > 0)) {
-      alert("Please upload at least one image for the product or variants.")
+
+    // Check if at least one variant has images
+    const hasVariantImages = variants.some((v) => v.images && v.images.length > 0)
+    if (!hasVariantImages) {
+      alert("Please upload at least one image for at least one variant.")
       return
     }
 
     try {
-      // Upload variant-specific images to Cloudinary
-      const preparedVariants = await Promise.all(
-        variants.map(async (v) => {
-          let variantImages = []
-          if (v.images && v.images.length > 0) {
-            variantImages = await Promise.all(
-              v.images.map(async (img) => {
-                if (typeof img === "object" && img.constructor === File) {
-                  // Upload new image
-                  const uploadResult = await uploadImageToCloudinary(img)
-                  return uploadResult
-                } else {
-                  // Existing image
-                  return img
-                }
-              }),
-            )
-          }
-
-          return {
-            size: `${v.sizeValue}${v.sizeUnit}`,
-            price: Number.parseFloat(v.price),
-            discountPercent: Number.parseFloat(v.discountPercent),
-            stock: Number.parseInt(v.stock),
-            isOutOfStock: Boolean(v.isOutOfStock),
-            images: variantImages, // Add variant-specific images
-          }
-        }),
-      )
-
       const detailsObject = {}
       detailsList.forEach((item) => {
         if (item.key && item.value) {
@@ -299,17 +229,33 @@ export default function AdminProductUpload() {
 
       const formData = new FormData()
       formData.append("name", name)
-      formData.append("variants", JSON.stringify(preparedVariants))
       formData.append("description", description)
       formData.append("details", JSON.stringify(detailsObject))
       formData.append("keywords", JSON.stringify(keywordsList))
       formData.append("productType", productType)
 
-      images.forEach((img) => formData.append("images", img))
+      // Prepare variants with image handling
+      const preparedVariants = variants.map((v, variantIndex) => {
+        // Add variant images to FormData with specific naming
+        if (v.images && v.images.length > 0) {
+          v.images.forEach((img, imgIndex) => {
+            if (typeof img === "object" && img.constructor === File) {
+              formData.append(`variant_${variantIndex}_image_${imgIndex}`, img)
+            }
+          })
+        }
 
-      if (removedImages.length > 0) {
-        formData.append("removedImages", JSON.stringify(removedImages))
-      }
+        return {
+          size: `${v.sizeValue}${v.sizeUnit}`,
+          price: Number.parseFloat(v.price),
+          discountPercent: Number.parseFloat(v.discountPercent),
+          stock: Number.parseInt(v.stock),
+          isOutOfStock: Boolean(v.isOutOfStock),
+          imageCount: v.images ? v.images.length : 0, // Send image count for backend processing
+        }
+      })
+
+      formData.append("variants", JSON.stringify(preparedVariants))
 
       const token = localStorage.getItem("adminToken")
       let res
@@ -372,9 +318,6 @@ export default function AdminProductUpload() {
       })
       .filter(Boolean)
     setVariants(parsedVariants)
-    setImages([])
-    setExistingImages(product.images?.others || [])
-    setRemovedImages([])
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
     setDescription(product.description || "")
     setKeywordsList(product.keywords || [])
@@ -596,7 +539,7 @@ export default function AdminProductUpload() {
 
                     {/* Variant-specific Image Upload */}
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Variant {i + 1} Images</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Variant {i + 1} Images *</label>
                       <input
                         type="file"
                         multiple
@@ -764,67 +707,6 @@ export default function AdminProductUpload() {
               />
             </div>
 
-            {/* Common Product Images */}
-            <div className="mb-8">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Common Product Images (Optional - fallback if variant has no images)
-              </label>
-              <input
-                id="product-images"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {/* New Images Preview */}
-              {images.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">New Images</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {images.map((img, i) => (
-                      <div key={i} className="relative">
-                        <img
-                          src={URL.createObjectURL(img) || "/placeholder.svg"}
-                          alt={`New image ${i}`}
-                          className="w-full h-24 object-cover rounded-lg border"
-                        />
-                        <button
-                          onClick={() => removeNewImage(i)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Existing Images Preview */}
-              {existingImages.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Existing Images</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {existingImages.map((img, i) => (
-                      <div key={i} className="relative">
-                        <img
-                          src={img.url || "/placeholder.svg?height=100&width=100"}
-                          alt={`Existing image ${i}`}
-                          className="w-full h-24 object-cover rounded-lg border"
-                        />
-                        <button
-                          onClick={() => handleImageRemove(img.public_id)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Submit Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
               <button
@@ -866,11 +748,13 @@ export default function AdminProductUpload() {
                     key={product._id}
                     className="border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-all duration-200 bg-white"
                   >
+                    {/* Show first variant image or fallback */}
                     <img
                       src={
-                        product?.images?.others?.[0]?.url
-                          ? product.images.others[0].url
-                          : "/placeholder.svg?height=200&width=200"
+                        product?.variants?.[0]?.images?.[0]?.url ||
+                        product?.images?.others?.[0]?.url ||
+                        "/placeholder.svg?height=200&width=200" ||
+                        "/placeholder.svg"
                       }
                       alt={product.title}
                       className="w-full h-48 object-cover mb-4 rounded-xl"
