@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import axios from "axios"
 import { API_BASE } from "../utils/api"
@@ -448,6 +450,33 @@ export default function AdminProductUpload() {
     return typeof img === "object" && img.constructor === File
   }
 
+  // Bulk migrate all products
+  const handleBulkMigration = async () => {
+    if (!window.confirm("This will migrate ALL products to the new image structure. Continue?")) return
+
+    try {
+      const token = localStorage.getItem("adminToken")
+      console.log("🔄 Starting bulk migration...")
+
+      const response = await axios.post(
+        `${API_BASE}/api/products/bulk-migrate-images`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+
+      console.log("🔄 Bulk migration result:", response.data)
+      alert(
+        `✅ Bulk migration completed!\n${response.data.migratedCount} products migrated\n${response.data.errorCount} errors`,
+      )
+
+      // Refresh products list
+      await fetchProducts()
+    } catch (err) {
+      console.error("❌ Bulk migration failed:", err)
+      alert("❌ Bulk migration failed: " + (err.response?.data?.message || err.message))
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
@@ -465,14 +494,22 @@ export default function AdminProductUpload() {
                     : "Create a new product with variants and details"}
                 </p>
               </div>
-              {editingProduct && (
+              <div className="flex gap-2">
                 <button
-                  onClick={resetForm}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  onClick={handleBulkMigration}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                 >
-                  Cancel Edit
+                  🔄 Fix All Products
                 </button>
-              )}
+                {editingProduct && (
+                  <button
+                    onClick={resetForm}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
