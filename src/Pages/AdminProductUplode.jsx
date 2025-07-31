@@ -90,19 +90,20 @@ export default function AdminProductUpload() {
     setProductType("")
   }
 
-  // Migrate product images if needed
-  const migrateProductImages = async (productId) => {
+  // Force migrate product images
+  const forceImageMigration = async (productId) => {
     try {
       const token = localStorage.getItem("adminToken")
+      console.log("🔄 FORCE migrating product:", productId)
       const response = await axios.post(
         `${API_BASE}/api/products/migrate-images/${productId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
-      console.log("🔄 Migration result:", response.data)
+      console.log("🔄 FORCE Migration result:", response.data)
       return response.data.product || null
     } catch (err) {
-      console.error("❌ Migration failed:", err)
+      console.error("❌ FORCE Migration failed:", err)
       return null
     }
   }
@@ -303,15 +304,20 @@ export default function AdminProductUpload() {
 
   const handleEdit = async (product) => {
     console.log("🔍 Editing product:", product)
+    console.log("🔍 Product common images:", product.images?.others?.length || 0)
+    console.log(
+      "🔍 Product variants:",
+      product.variants?.map((v, i) => ({ index: i, size: v.size, imageCount: v.images?.length || 0 })),
+    )
 
-    // Try to migrate the product first if it has old structure
+    // ALWAYS try to force migrate if there are common images
     let productToEdit = product
-    if (product.images?.others?.length > 0 && product.variants?.some((v) => !v.images || v.images.length === 0)) {
-      console.log("🔄 Product needs migration, attempting migration...")
-      const migratedProduct = await migrateProductImages(product._id)
+    if (product.images?.others?.length > 0) {
+      console.log("🔄 Product has common images - FORCE migrating...")
+      const migratedProduct = await forceImageMigration(product._id)
       if (migratedProduct) {
         productToEdit = migratedProduct
-        console.log("✅ Product migrated successfully")
+        console.log("✅ Product FORCE migrated successfully")
         console.log(
           "🔍 Migrated product variants:",
           migratedProduct.variants.map((v) => ({
@@ -322,6 +328,8 @@ export default function AdminProductUpload() {
         )
         // Refresh the products list to show updated data
         await fetchProducts()
+      } else {
+        console.log("❌ FORCE migration failed, using original product")
       }
     }
 
@@ -631,9 +639,7 @@ export default function AdminProductUpload() {
                           <p className="text-sm text-gray-600 mb-2">
                             Current Images ({variant.images.length}):
                             {editingProduct && (
-                              <span className="ml-2 text-xs text-blue-600">
-                                (Auto-migrated from common images if needed)
-                              </span>
+                              <span className="ml-2 text-xs text-green-600">✅ Migrated from common images</span>
                             )}
                           </p>
                           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -857,15 +863,14 @@ export default function AdminProductUpload() {
                       </p>
                     )}
 
-                    {/* Show migration status */}
-                    {product.images?.others?.length > 0 &&
-                      product.variants?.some((v) => !v.images || v.images.length === 0) && (
-                        <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <p className="text-xs text-yellow-700">
-                            ⚠️ This product uses old image structure. Click "Edit" to auto-migrate.
-                          </p>
-                        </div>
-                      )}
+                    {/* Show migration status - Enhanced to show FORCE migration needed */}
+                    {product.images?.others?.length > 0 && (
+                      <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                        <p className="text-xs text-orange-700">
+                          🔄 This product has common images that will be FORCE migrated to variants when edited.
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-3 mb-6">
                       <h4 className="text-sm font-medium text-gray-700">Variants:</h4>
@@ -927,7 +932,7 @@ export default function AdminProductUpload() {
                         onClick={() => handleEdit(product)}
                         className="w-full bg-yellow-500 text-white px-4 py-2 rounded-xl hover:bg-yellow-600 transition-colors font-medium"
                       >
-                        Edit
+                        Edit {product.images?.others?.length > 0 && "(Will Force Migrate)"}
                       </button>
                       <button
                         onClick={() => handleDelete(product._id)}
