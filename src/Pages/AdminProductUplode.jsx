@@ -291,6 +291,9 @@ export default function AdminProductUpload() {
         localStorage.removeItem("adminToken")
         localStorage.removeItem("admin")
         navigate("/login")
+      } else if (err.response?.status === 409) {
+        alert("Product was modified by another process. Please refresh the page and try again.")
+        fetchProducts() // Refresh the products list
       } else if (err.response?.status === 413) {
         alert("File size too large. Please reduce image sizes and try again.")
       } else if (err.response?.status === 500) {
