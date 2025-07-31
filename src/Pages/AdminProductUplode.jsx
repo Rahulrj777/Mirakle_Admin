@@ -312,8 +312,16 @@ export default function AdminProductUpload() {
       if (migratedProduct) {
         productToEdit = migratedProduct
         console.log("✅ Product migrated successfully")
+        console.log(
+          "🔍 Migrated product variants:",
+          migratedProduct.variants.map((v) => ({
+            size: v.size,
+            imageCount: v.images?.length || 0,
+            images: v.images,
+          })),
+        )
         // Refresh the products list to show updated data
-        fetchProducts()
+        await fetchProducts()
       }
     }
 
@@ -329,7 +337,7 @@ export default function AdminProductUpload() {
 
         // Handle images - they should now be properly migrated
         const existingImages = v.images || []
-        console.log(`🔍 Variant ${index} has ${existingImages.length} images`)
+        console.log(`🔍 Variant ${index} (${v.size}) has ${existingImages.length} images:`, existingImages)
 
         return {
           sizeValue,
@@ -343,6 +351,14 @@ export default function AdminProductUpload() {
         }
       })
       .filter(Boolean)
+
+    console.log(
+      "🔍 Final parsed variants for editing:",
+      parsedVariants.map((v) => ({
+        size: `${v.sizeValue}${v.sizeUnit}`,
+        imageCount: v.images?.length || 0,
+      })),
+    )
 
     setVariants(parsedVariants)
     setDetailsList(Object.entries(productToEdit.details || {}).map(([key, value]) => ({ key, value: String(value) })))
@@ -405,15 +421,23 @@ export default function AdminProductUpload() {
     return "/placeholder.svg?height=200&width=200"
   }
 
-  const isFileObject = (img) => {
-    return typeof img === "object" && img.constructor === File
-  }
-
   const getImageSrc = (img) => {
+    if (!img) return "/placeholder.svg"
+
     if (isFileObject(img)) {
       return URL.createObjectURL(img)
     }
+
+    // Handle both string URLs and object with url property
+    if (typeof img === "string") {
+      return img
+    }
+
     return img.url || "/placeholder.svg"
+  }
+
+  const isFileObject = (img) => {
+    return typeof img === "object" && img.constructor === File
   }
 
   return (
