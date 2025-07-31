@@ -212,11 +212,14 @@ export default function AdminProductUpload() {
       return
     }
 
-    // Check if at least one variant has images
-    const hasVariantImages = variants.some((v) => v.images && v.images.length > 0)
-    if (!hasVariantImages) {
-      alert("Please upload at least one image for at least one variant.")
-      return
+    // For new products, require at least one variant to have images
+    // For editing, allow updates without new images
+    if (!editingProduct) {
+      const hasVariantImages = variants.some((v) => v.images && v.images.length > 0)
+      if (!hasVariantImages) {
+        alert("Please upload at least one image for at least one variant.")
+        return
+      }
     }
 
     try {
@@ -251,7 +254,9 @@ export default function AdminProductUpload() {
           discountPercent: Number.parseFloat(v.discountPercent),
           stock: Number.parseInt(v.stock),
           isOutOfStock: Boolean(v.isOutOfStock),
-          imageCount: v.images ? v.images.length : 0, // Send image count for backend processing
+          imageCount: v.images
+            ? v.images.filter((img) => typeof img === "object" && img.constructor === File).length
+            : 0, // Only count new images
         }
       })
 
@@ -313,7 +318,7 @@ export default function AdminProductUpload() {
           finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
           stock: v.stock,
           isOutOfStock: v.isOutOfStock || false,
-          images: v.images || [], // Load existing variant images
+          images: v.images || [], // Load existing variant images, fallback to empty array
         }
       })
       .filter(Boolean)
@@ -363,6 +368,20 @@ export default function AdminProductUpload() {
     } finally {
       setLoadingMap((prev) => ({ ...prev, [key]: false }))
     }
+  }
+
+  // Helper function to get display image for a product
+  const getProductDisplayImage = (product) => {
+    // First try to get image from first variant
+    if (product?.variants?.[0]?.images?.[0]?.url) {
+      return product.variants[0].images[0].url
+    }
+    // Fallback to common product images
+    if (product?.images?.others?.[0]?.url) {
+      return product.images.others[0].url
+    }
+    // Final fallback
+    return "/placeholder.svg?height=200&width=200"
   }
 
   return (
@@ -539,7 +558,9 @@ export default function AdminProductUpload() {
 
                     {/* Variant-specific Image Upload */}
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Variant {i + 1} Images *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Variant {i + 1} Images {!editingProduct && "*"}
+                      </label>
                       <input
                         type="file"
                         multiple
@@ -750,12 +771,7 @@ export default function AdminProductUpload() {
                   >
                     {/* Show first variant image or fallback */}
                     <img
-                      src={
-                        product?.variants?.[0]?.images?.[0]?.url ||
-                        product?.images?.others?.[0]?.url ||
-                        "/placeholder.svg?height=200&width=200" ||
-                        "/placeholder.svg"
-                      }
+                      src={getProductDisplayImage(product) || "/placeholder.svg"}
                       alt={product.title}
                       className="w-full h-48 object-cover mb-4 rounded-xl"
                     />
