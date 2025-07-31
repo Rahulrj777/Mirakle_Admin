@@ -305,14 +305,26 @@ export default function AdminProductUpload() {
   }
 
   const handleEdit = (product) => {
+    console.log("🔍 Editing product:", product)
+    console.log("🔍 Product variants:", product.variants)
+
     setEditingProduct(product)
     setName(product.title)
     setProductType(product.productType || "")
+
     const parsedVariants = product.variants
-      .map((v) => {
+      .map((v, index) => {
+        console.log(`🔍 Processing variant ${index}:`, v)
+        console.log(`🔍 Variant images:`, v.images)
+
         const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
         if (!match) return null
         const [, sizeValue, sizeUnit] = match
+
+        // Properly handle existing images - they should be objects with url property
+        const existingImages = v.images || []
+        console.log(`🔍 Existing images for variant ${index}:`, existingImages)
+
         return {
           sizeValue,
           sizeUnit,
@@ -321,10 +333,12 @@ export default function AdminProductUpload() {
           finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
           stock: v.stock,
           isOutOfStock: v.isOutOfStock || false,
-          images: v.images || [], // Load existing variant images, fallback to empty array
+          images: existingImages, // Keep existing images as they are
         }
       })
       .filter(Boolean)
+
+    console.log("🔍 Parsed variants:", parsedVariants)
     setVariants(parsedVariants)
     setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
     setDescription(product.description || "")
@@ -385,6 +399,19 @@ export default function AdminProductUpload() {
     }
     // Final fallback
     return "/placeholder.svg?height=200&width=200"
+  }
+
+  // Helper function to determine if an image is a File object or existing image
+  const isFileObject = (img) => {
+    return typeof img === "object" && img.constructor === File
+  }
+
+  // Helper function to get image source for display
+  const getImageSrc = (img) => {
+    if (isFileObject(img)) {
+      return URL.createObjectURL(img)
+    }
+    return img.url || "/placeholder.svg"
   }
 
   return (
@@ -574,24 +601,36 @@ export default function AdminProductUpload() {
                       {/* Variant Images Preview */}
                       {variant.images && variant.images.length > 0 && (
                         <div className="mt-3">
+                          <p className="text-sm text-gray-600 mb-2">Current Images ({variant.images.length}):</p>
                           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                             {variant.images.map((img, imgIndex) => (
                               <div key={imgIndex} className="relative">
                                 <img
-                                  src={
-                                    typeof img === "object" && img.constructor === File
-                                      ? URL.createObjectURL(img)
-                                      : img.url || "/placeholder.svg"
-                                  }
+                                  src={getImageSrc(img) || "/placeholder.svg"}
                                   alt={`Variant ${i + 1} image ${imgIndex + 1}`}
                                   className="w-full h-20 object-cover rounded-lg border"
+                                  onError={(e) => {
+                                    console.error("Image load error:", e)
+                                    e.target.src = "/placeholder.svg"
+                                  }}
                                 />
                                 <button
                                   onClick={() => removeVariantImage(i, imgIndex)}
                                   className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                  title="Remove image"
                                 >
                                   ×
                                 </button>
+                                {/* Show indicator for existing vs new images */}
+                                <div className="absolute bottom-1 left-1">
+                                  <span
+                                    className={`text-xs px-1 py-0.5 rounded text-white ${
+                                      isFileObject(img) ? "bg-green-500" : "bg-blue-500"
+                                    }`}
+                                  >
+                                    {isFileObject(img) ? "New" : "Saved"}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>
