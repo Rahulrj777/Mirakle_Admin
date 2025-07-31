@@ -16,7 +16,7 @@ export default function AdminProductUpload() {
       finalPrice: "",
       stock: "",
       isOutOfStock: false,
-      images: [], // Add images array for each variant
+      images: [],
     },
   ])
   const [products, setProducts] = useState([])
@@ -90,7 +90,23 @@ export default function AdminProductUpload() {
     setProductType("")
   }
 
-  // New function to handle variant-specific image uploads
+  // Migrate product images if needed
+  const migrateProductImages = async (productId) => {
+    try {
+      const token = localStorage.getItem("adminToken")
+      const response = await axios.post(
+        `${API_BASE}/api/products/migrate-images/${productId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      console.log("🔄 Migration result:", response.data)
+      return response.data.product || null
+    } catch (err) {
+      console.error("❌ Migration failed:", err)
+      return null
+    }
+  }
+
   const handleVariantImageChange = (variantIndex, e) => {
     if (e.target.files) {
       const newImages = Array.from(e.target.files)
@@ -102,7 +118,6 @@ export default function AdminProductUpload() {
     }
   }
 
-  // New function to remove variant-specific images
   const removeVariantImage = (variantIndex, imageIndex) => {
     setVariants((prev) => {
       const updated = [...prev]
@@ -137,7 +152,7 @@ export default function AdminProductUpload() {
         finalPrice: "",
         stock: "",
         isOutOfStock: false,
-        images: [], // Initialize with empty images array
+        images: [],
       },
     ])
   }
@@ -200,11 +215,9 @@ export default function AdminProductUpload() {
   const handleSubmit = async () => {
     console.log("🔘 Submit button clicked")
     debugToken()
-    console.log("⚠️ Skipping token validation, proceeding with request...")
 
     if (!name || variants.some((v) => !v.sizeValue || !v.price)) {
       alert("Product name and current price are required")
-      console.warn("❌ Validation failed", { name, variants })
       return
     }
     if (!productType) {
@@ -212,8 +225,6 @@ export default function AdminProductUpload() {
       return
     }
 
-    // For new products, require at least one variant to have images
-    // For editing, allow updates without new images
     if (!editingProduct) {
       const hasVariantImages = variants.some((v) => v.images && v.images.length > 0)
       if (!hasVariantImages) {
@@ -237,9 +248,7 @@ export default function AdminProductUpload() {
       formData.append("keywords", JSON.stringify(keywordsList))
       formData.append("productType", productType)
 
-      // Prepare variants with image handling
       const preparedVariants = variants.map((v, variantIndex) => {
-        // Add variant images to FormData with specific naming
         if (v.images && v.images.length > 0) {
           v.images.forEach((img, imgIndex) => {
             if (typeof img === "object" && img.constructor === File) {
@@ -254,16 +263,12 @@ export default function AdminProductUpload() {
           discountPercent: Number.parseFloat(v.discountPercent),
           stock: Number.parseInt(v.stock),
           isOutOfStock: Boolean(v.isOutOfStock),
-          imageCount: v.images
-            ? v.images.filter((img) => typeof img === "object" && img.constructor === File).length
-            : 0, // Only count new images
         }
       })
 
       formData.append("variants", JSON.stringify(preparedVariants))
 
       const token = localStorage.getItem("adminToken")
-      let res
       const config = {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -272,14 +277,13 @@ export default function AdminProductUpload() {
         timeout: 30000,
       }
 
+      let res
       if (editingProduct) {
         res = await axios.put(`${API_BASE}/api/products/update/${editingProduct._id}`, formData, config)
-        alert("✅ Product updated")
-        console.log("🟢 Updated:", res.data)
+        alert("✅ Product updated successfully!")
       } else {
         res = await axios.post(`${API_BASE}/api/products/upload-product`, formData, config)
-        alert("✅ Product uploaded")
-        console.log("🟢 Uploaded:", res.data)
+        alert("✅ Product uploaded successfully!")
       }
 
       resetForm()
@@ -291,39 +295,41 @@ export default function AdminProductUpload() {
         localStorage.removeItem("adminToken")
         localStorage.removeItem("admin")
         navigate("/login")
-      } else if (err.response?.status === 409) {
-        alert("Product was modified by another process. Please refresh the page and try again.")
-        fetchProducts() // Refresh the products list
-      } else if (err.response?.status === 413) {
-        alert("File size too large. Please reduce image sizes and try again.")
-      } else if (err.response?.status === 500) {
-        alert("Server error. Please try again later.")
       } else {
         alert(err.response?.data?.message || "Operation failed. Please try again.")
       }
     }
   }
 
-  const handleEdit = (product) => {
+  const handleEdit = async (product) => {
     console.log("🔍 Editing product:", product)
-    console.log("🔍 Product variants:", product.variants)
 
-    setEditingProduct(product)
-    setName(product.title)
-    setProductType(product.productType || "")
+    // Try to migrate the product first if it has old structure
+    let productToEdit = product
+    if (product.images?.others?.length > 0 && product.variants?.some((v) => !v.images || v.images.length === 0)) {
+      console.log("🔄 Product needs migration, attempting migration...")
+      const migratedProduct = await migrateProductImages(product._id)
+      if (migratedProduct) {
+        productToEdit = migratedProduct
+        console.log("✅ Product migrated successfully")
+        // Refresh the products list to show updated data
+        fetchProducts()
+      }
+    }
 
-    const parsedVariants = product.variants
+    setEditingProduct(productToEdit)
+    setName(productToEdit.title)
+    setProductType(productToEdit.productType || "")
+
+    const parsedVariants = productToEdit.variants
       .map((v, index) => {
-        console.log(`🔍 Processing variant ${index}:`, v)
-        console.log(`🔍 Variant images:`, v.images)
-
         const match = v.size.match(/^([\d.]+)([a-zA-Z]+)$/)
         if (!match) return null
         const [, sizeValue, sizeUnit] = match
 
-        // Properly handle existing images - they should be objects with url property
+        // Handle images - they should now be properly migrated
         const existingImages = v.images || []
-        console.log(`🔍 Existing images for variant ${index}:`, existingImages)
+        console.log(`🔍 Variant ${index} has ${existingImages.length} images`)
 
         return {
           sizeValue,
@@ -333,16 +339,15 @@ export default function AdminProductUpload() {
           finalPrice: (v.price - (v.price * (v.discountPercent || 0)) / 100).toFixed(2),
           stock: v.stock,
           isOutOfStock: v.isOutOfStock || false,
-          images: existingImages, // Keep existing images as they are
+          images: existingImages,
         }
       })
       .filter(Boolean)
 
-    console.log("🔍 Parsed variants:", parsedVariants)
     setVariants(parsedVariants)
-    setDetailsList(Object.entries(product.details || {}).map(([key, value]) => ({ key, value: String(value) })))
-    setDescription(product.description || "")
-    setKeywordsList(product.keywords || [])
+    setDetailsList(Object.entries(productToEdit.details || {}).map(([key, value]) => ({ key, value: String(value) })))
+    setDescription(productToEdit.description || "")
+    setKeywordsList(productToEdit.keywords || [])
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -368,7 +373,7 @@ export default function AdminProductUpload() {
 
   const toggleVariantStock = async (productId, variantIndex, currentStatus) => {
     const key = `variant-${productId}-${variantIndex}`
-    if (loadingMap[key]) return // prevent duplicate requests
+    if (loadingMap[key]) return
     setLoadingMap((prev) => ({ ...prev, [key]: true }))
     try {
       const token = localStorage.getItem("adminToken")
@@ -378,7 +383,7 @@ export default function AdminProductUpload() {
         { headers: { Authorization: `Bearer ${token}` } },
       )
       alert("Variant stock updated!")
-      fetchProducts() // refresh product list
+      fetchProducts()
     } catch (err) {
       alert("Failed to update variant stock.")
       console.error(err)
@@ -389,24 +394,21 @@ export default function AdminProductUpload() {
 
   // Helper function to get display image for a product
   const getProductDisplayImage = (product) => {
-    // First try to get image from first variant
+    // First try variant images
     if (product?.variants?.[0]?.images?.[0]?.url) {
       return product.variants[0].images[0].url
     }
-    // Fallback to common product images
+    // Fallback to common images (for old products)
     if (product?.images?.others?.[0]?.url) {
       return product.images.others[0].url
     }
-    // Final fallback
     return "/placeholder.svg?height=200&width=200"
   }
 
-  // Helper function to determine if an image is a File object or existing image
   const isFileObject = (img) => {
     return typeof img === "object" && img.constructor === File
   }
 
-  // Helper function to get image source for display
   const getImageSrc = (img) => {
     if (isFileObject(img)) {
       return URL.createObjectURL(img)
@@ -445,6 +447,7 @@ export default function AdminProductUpload() {
           {/* Product Form */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Product Information</h2>
+
             {/* Product Name */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
@@ -601,7 +604,14 @@ export default function AdminProductUpload() {
                       {/* Variant Images Preview */}
                       {variant.images && variant.images.length > 0 && (
                         <div className="mt-3">
-                          <p className="text-sm text-gray-600 mb-2">Current Images ({variant.images.length}):</p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Current Images ({variant.images.length}):
+                            {editingProduct && (
+                              <span className="ml-2 text-xs text-blue-600">
+                                (Auto-migrated from common images if needed)
+                              </span>
+                            )}
+                          </p>
                           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                             {variant.images.map((img, imgIndex) => (
                               <div key={imgIndex} className="relative">
@@ -811,7 +821,6 @@ export default function AdminProductUpload() {
                     key={product._id}
                     className="border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-all duration-200 bg-white"
                   >
-                    {/* Show first variant image or fallback */}
                     <img
                       src={getProductDisplayImage(product) || "/placeholder.svg"}
                       alt={product.title}
@@ -823,7 +832,17 @@ export default function AdminProductUpload() {
                         <span className="font-medium">Type:</span> {product.productType}
                       </p>
                     )}
-                    {/* Variants with individual stock status and images */}
+
+                    {/* Show migration status */}
+                    {product.images?.others?.length > 0 &&
+                      product.variants?.some((v) => !v.images || v.images.length === 0) && (
+                        <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-xs text-yellow-700">
+                            ⚠️ This product uses old image structure. Click "Edit" to auto-migrate.
+                          </p>
+                        </div>
+                      )}
+
                     <div className="space-y-3 mb-6">
                       <h4 className="text-sm font-medium text-gray-700">Variants:</h4>
                       {product.variants?.map((v, i) => (
