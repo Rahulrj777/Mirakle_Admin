@@ -119,7 +119,26 @@ export default function AdminProductUpload() {
     }
   }
 
-  const removeVariantImage = (variantIndex, imageIndex) => {
+  const removeVariantImage = async (variantIndex, imageIndex) => {
+    const imageToRemove = variants[variantIndex].images[imageIndex]
+
+    // If it's an existing image (not a File object), delete from server
+    if (!isFileObject(imageToRemove) && editingProduct) {
+      try {
+        const token = localStorage.getItem("adminToken")
+        await axios.delete(
+          `${API_BASE}/api/products/variant-image/${editingProduct._id}/${variantIndex}/${imageIndex}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        console.log("✅ Image deleted from server")
+      } catch (err) {
+        console.error("❌ Failed to delete image from server:", err)
+        alert("Failed to delete image from server")
+        return
+      }
+    }
+
+    // Remove from local state
     setVariants((prev) => {
       const updated = [...prev]
       updated[variantIndex].images.splice(imageIndex, 1)
@@ -450,33 +469,29 @@ export default function AdminProductUpload() {
 
   // Bulk migrate all products
   const handleBulkMigration = async () => {
-    if (
-      !window.confirm(
-        "This will fix the database structure and migrate ALL products to support variant images. Continue?",
-      )
-    )
+    if (!window.confirm("This will migrate ALL products with common images to variant-specific images. Continue?"))
       return
 
     try {
       const token = localStorage.getItem("adminToken")
-      console.log("🔄 Starting database structure fix...")
+      console.log("🔄 Starting bulk migration...")
 
       const response = await axios.post(
-        `${API_BASE}/api/products/fix-database-structure`,
+        `${API_BASE}/api/products/bulk-migrate-images`,
         {},
         { headers: { Authorization: `Bearer ${token}` } },
       )
 
-      console.log("🔄 Database fix result:", response.data)
+      console.log("🔄 Bulk migration result:", response.data)
       alert(
-        `✅ Database structure fixed successfully!\n${response.data.fixedCount} products updated\n${response.data.errorCount} errors\n\nAll variants now support images!`,
+        `✅ Migration completed!\n${response.data.migratedCount} products migrated\n${response.data.errorCount} errors`,
       )
 
       // Refresh products list
       await fetchProducts()
     } catch (err) {
-      console.error("❌ Database structure fix failed:", err)
-      alert("❌ Database structure fix failed: " + (err.response?.data?.message || err.message))
+      console.error("❌ Bulk migration failed:", err)
+      alert("❌ Migration failed: " + (err.response?.data?.message || err.message))
     }
   }
 
@@ -502,7 +517,7 @@ export default function AdminProductUpload() {
                   onClick={handleBulkMigration}
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                 >
-                  🔧 Fix Database Structure
+                  🔄 Migrate Images
                 </button>
                 {editingProduct && (
                   <button
