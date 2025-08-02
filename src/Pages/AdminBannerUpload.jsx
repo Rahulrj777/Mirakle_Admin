@@ -308,7 +308,7 @@ const AdminBannerUpload = () => {
 
     // Populate common fields
     setTitle(banner.title || "")
-    setImage(null) // Clear image input, user can re-upload if needed
+    setImage(null)
 
     // Populate type-specific fields
     if (banner.type === "category") {
@@ -406,10 +406,10 @@ const AdminBannerUpload = () => {
           disabled={!!editingBanner}
         >
           <option value="all">Show All (View Only)</option>
-          <option value="homebanner">Main Banner</option>
-          <option value="category">Category Banner</option>
-          <option value="offerbanner">Offer Zone Banner</option>
-          <option value="product-type">Our Special Product's Banner</option>
+          <option value="homebanner">Main Banner (1100 x 550)</option>
+          <option value="category">Category Banner (740 x 414)</option>
+          <option value="offerbanner">Offer Zone (1600 x 1200)</option>
+          <option value="product-type">Special Product's</option>
         </select>
 
         {type !== "all" && (
