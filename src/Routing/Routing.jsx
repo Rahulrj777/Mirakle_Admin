@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminBannerUpload from "../Pages/AdminBannerUpload";
 import AdminProductUpload from "../Pages/AdminProductUplode";
-import UserMessages from "../Pages/UserMessages";
+import UserMessages from "../Pages/UserMessage";
 import LoginPage from "../Componenets/LoginPage";
 import SignUpPage from "../Componenets/SignUpPage";
 import AuthGuard from "../Componenets/AuthGuard";
