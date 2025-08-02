@@ -1,34 +1,66 @@
 import { useEffect, useState } from "react";
 
-export default function AdminContactMessages() {
+const UserMessages = () => {
   const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch("https://mirakle-website-server.onrender.com/api/contact");
+      const data = await res.json();
+
+      if (data.success) {
+        setMessages(data.messages || []);
+      } else {
+        console.error("Failed to fetch messages:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch("https://mirakle-website-server.onrender.com/api/contact")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setMessages(data.messages);
-      });
+    fetchMessages();
   }, []);
 
+  if (loading) return <p>Loading messages...</p>;
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Contact Messages</h1>
+    <div className="p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">User Messages</h2>
+
       {messages.length === 0 ? (
-        <p>No messages yet</p>
+        <p className="text-gray-500">No messages found.</p>
       ) : (
-        <div className="space-y-4">
-          {messages.map((msg) => (
-            <div key={msg._id} className="border rounded-lg p-4 bg-white shadow">
-              <p className="font-semibold">{msg.name} ({msg.email})</p>
-              <p className="text-gray-700 mt-2">{msg.message}</p>
-              <p className="text-xs text-gray-500 mt-2">
-                {new Date(msg.createdAt).toLocaleString()}
-              </p>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto border-collapse border border-gray-200">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="border border-gray-200 px-4 py-2 text-left">Name</th>
+                <th className="border border-gray-200 px-4 py-2 text-left">Email</th>
+                <th className="border border-gray-200 px-4 py-2 text-left">Message</th>
+                <th className="border border-gray-200 px-4 py-2 text-left">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {messages.map((msg, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="border border-gray-200 px-4 py-2">{msg.name}</td>
+                  <td className="border border-gray-200 px-4 py-2">{msg.email}</td>
+                  <td className="border border-gray-200 px-4 py-2">{msg.message}</td>
+                  <td className="border border-gray-200 px-4 py-2">
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default UserMessages;

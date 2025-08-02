@@ -39,6 +39,15 @@ const AdminLayout = ({ children }) => {
         </button>
 
         <button
+          onClick={() => navigate("/admin/messages")}
+          className={`text-left p-2 rounded w-full ${
+            isActive("/admin/messages") ? "bg-gray-200 font-semibold" : "hover:bg-gray-100"
+          }`}
+        >
+          User Messages
+        </button>
+
+        <button
           onClick={logout}
           className="mt-auto text-left bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full"
         >
