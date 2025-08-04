@@ -26,8 +26,6 @@ const UserMessages = () => {
     fetchMessages();
   }, []);
 
-  if (loading) return <p>Loading messages...</p>;
-
   return (
     <AdminLayout>
       <div className="p-6 bg-white rounded-lg shadow-md">
