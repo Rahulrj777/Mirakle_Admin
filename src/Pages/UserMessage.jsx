@@ -8,29 +8,24 @@ const UserMessages = () => {
 
   const unrepliedCount = messages.filter(msg => msg.status !== "responded").length;
 
-  // Fetch messages from backend
   const fetchMessages = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("https://mirakle-website-server.onrender.com/api/contact");
       const data = await res.json();
-
       if (data.success) {
         setMessages(data.messages || []);
       } else {
         setError(data.error || "Failed to fetch messages");
-        console.error("Failed to fetch messages:", data.error);
       }
-    } catch (fetchError) {
+    } catch (err) {
       setError("Error fetching messages");
-      console.error("Error fetching messages:", fetchError);
     } finally {
       setLoading(false);
     }
   };
 
-  // Mark a message as replied
   const markAsReplied = async (id) => {
     try {
       const res = await fetch(
@@ -38,13 +33,8 @@ const UserMessages = () => {
         { method: "PUT" }
       );
       const data = await res.json();
-
-      if (data.success) {
-        // Refresh messages after marking replied
-        fetchMessages();
-      } else {
-        alert("Failed to mark as replied");
-      }
+      if (data.success) fetchMessages();
+      else alert("Failed to mark as replied");
     } catch (err) {
       console.error(err);
       alert("An error occurred while marking as replied.");
@@ -86,14 +76,12 @@ const UserMessages = () => {
                 </tr>
               </thead>
               <tbody>
-                {messages.map((msg, index) => (
-                  <tr key={msg._id || index} className="hover:bg-gray-50">
+                {messages.map((msg) => (
+                  <tr key={msg._id} className="hover:bg-gray-50">
                     <td className="border border-gray-200 px-4 py-2">{msg.name}</td>
                     <td className="border border-gray-200 px-4 py-2">{msg.email}</td>
                     <td className="border border-gray-200 px-4 py-2 whitespace-pre-wrap">{msg.message}</td>
-                    <td className="border border-gray-200 px-4 py-2">
-                      {new Date(msg.createdAt).toLocaleString()}
-                    </td>
+                    <td className="border border-gray-200 px-4 py-2">{new Date(msg.createdAt).toLocaleString()}</td>
                     <td className="border border-gray-200 px-4 py-2">
                       {msg.status === "responded" ? (
                         <span className="text-green-600 font-semibold">Replied</span>
@@ -101,9 +89,7 @@ const UserMessages = () => {
                         <>
                           <button
                             className="text-blue-600 hover:underline mr-2 text-sm"
-                            onClick={() =>
-                              window.open(`mailto:${msg.email}?subject=Re: Your message`)
-                            }
+                            onClick={() => window.open(`mailto:${msg.email}?subject=Re: Your message`)}
                             aria-label={`Reply to ${msg.name}`}
                           >
                             Reply
